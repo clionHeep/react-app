@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Dispatch, SetStateAction } from "react";
 import type { LayoutType } from "@/types";
 import TopLayout from "@/layouts/TopLayout";
 import SideLayout from "@/layouts/SideLayout";
@@ -7,7 +7,17 @@ import CustomLayout from "@/layouts/CustomLayout";
 import LayoutPreview from "./preview/LayoutPreview";
 import { ConfigProvider, theme as antdTheme } from "antd";
 
-const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+interface MainLayoutProps {
+  children: React.ReactNode;
+  isDarkMode?: boolean; // 添加isDarkMode属性，可选
+  setIsDarkMode?: Dispatch<SetStateAction<boolean>>; // 添加setIsDarkMode回调函数，可选
+}
+
+const MainLayout: React.FC<MainLayoutProps> = ({ 
+  children, 
+  isDarkMode: propIsDarkMode, 
+  setIsDarkMode: propSetIsDarkMode 
+}) => {
   const [collapsed, setCollapsed] = useState(false);
   const [layoutType, setLayoutType] = useState<LayoutType>(() => {
     // 从localStorage中恢复布局设置
@@ -23,7 +33,12 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [localThemeMode, setLocalThemeMode] = useState<
     "light" | "dark" | "custom"
   >(() => {
-    // 从localStorage中恢复主题设置
+    // 如果提供了外部isDarkMode，则基于它设置初始主题模式
+    if (propIsDarkMode !== undefined) {
+      return propIsDarkMode ? "dark" : "light";
+    }
+    
+    // 否则从localStorage中恢复主题设置
     if (typeof window !== "undefined") {
       const savedTheme = localStorage.getItem("themeMode") as
         | "light"
@@ -97,6 +112,13 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // 添加主题变更处理函数
   const handleThemeModeChange = (mode: "light" | "dark" | "custom") => {
     setLocalThemeMode(mode);
+
+    // 如果传入了外部的setIsDarkMode函数，则同步更新外部状态
+    if (propSetIsDarkMode && mode === "dark") {
+      propSetIsDarkMode(true);
+    } else if (propSetIsDarkMode && mode === "light") {
+      propSetIsDarkMode(false);
+    }
 
     // 更新文档根元素类名或样式
     document.documentElement.setAttribute("data-theme", mode);

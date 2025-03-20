@@ -1,0 +1,163 @@
+/* 深色模式下的内容增强样式 */
+
+/* 为DarkModeWrapper组件提供基础样式 */
+.dark-mode-wrapper {
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+  transition: all 0.3s ease;
+}
+
+/* 深色模式下的DarkModeWrapper增强样式 */
+.dark-mode-wrapper.dark-mode {
+  background: #252525;
+  color: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+/* 标题样式增强 */
+.dark-mode-wrapper.dark-mode h1,
+.dark-mode-wrapper.dark-mode h2,
+.dark-mode-wrapper.dark-mode h3,
+.dark-mode-wrapper.dark-mode h4,
+.dark-mode-wrapper.dark-mode h5,
+.dark-mode-wrapper.dark-mode h6 {
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  margin-bottom: 16px;
+}
+
+/* 增强段落和文本元素可见度 */
+.dark-mode-wrapper.dark-mode p,
+.dark-mode-wrapper.dark-mode span,
+.dark-mode-wrapper.dark-mode div {
+  color: rgba(255, 255, 255, 0.95);
+  line-height: 1.6;
+}
+
+/* 链接样式增强 */
+.dark-mode-wrapper.dark-mode a {
+  color: #4dabf7;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.dark-mode-wrapper.dark-mode a:hover {
+  color: #74c0fc;
+  text-decoration: underline;
+}
+
+/* 列表样式增强 */
+.dark-mode-wrapper.dark-mode ul,
+.dark-mode-wrapper.dark-mode ol {
+  color: rgba(255, 255, 255, 0.95);
+  padding-left: 20px;
+  margin-bottom: 16px;
+}
+
+.dark-mode-wrapper.dark-mode li {
+  margin-bottom: 8px;
+}
+
+/* 表格样式增强 */
+.dark-mode-wrapper.dark-mode table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 16px;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.dark-mode-wrapper.dark-mode th,
+.dark-mode-wrapper.dark-mode td {
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.dark-mode-wrapper.dark-mode th {
+  background-color: rgba(255, 255, 255, 0.05);
+  font-weight: 600;
+}
+
+.dark-mode-wrapper.dark-mode tr:nth-child(even) {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+/* 分割线样式增强 */
+.dark-mode-wrapper.dark-mode hr,
+.dark-mode-wrapper.dark-mode .ant-divider {
+  border-color: rgba(255, 255, 255, 0.15);
+  margin: 16px 0;
+}
+
+/* 引用块样式增强 */
+.dark-mode-wrapper.dark-mode blockquote {
+  border-left: 4px solid rgba(255, 255, 255, 0.2);
+  padding-left: 16px;
+  margin-left: 0;
+  color: rgba(255, 255, 255, 0.8);
+  font-style: italic;
+}
+
+/* 代码块样式增强 */
+.dark-mode-wrapper.dark-mode code,
+.dark-mode-wrapper.dark-mode pre {
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-family: monospace;
+  color: #e6e6e6;
+}
+
+.dark-mode-wrapper.dark-mode pre {
+  padding: 12px;
+  overflow-x: auto;
+}
+
+/* 表单元素样式增强 */
+.dark-mode-wrapper.dark-mode input,
+.dark-mode-wrapper.dark-mode textarea,
+.dark-mode-wrapper.dark-mode select {
+  background-color: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.95);
+  padding: 8px 12px;
+  border-radius: 4px;
+}
+
+.dark-mode-wrapper.dark-mode input:focus,
+.dark-mode-wrapper.dark-mode textarea:focus,
+.dark-mode-wrapper.dark-mode select:focus {
+  border-color: rgba(255, 255, 255, 0.3);
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(77, 171, 247, 0.2);
+}
+
+.dark-mode-wrapper.dark-mode label {
+  color: rgba(255, 255, 255, 0.85);
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+/* 按钮样式增强 */
+.dark-mode-wrapper.dark-mode button:not(.ant-btn) {
+  background-color: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.95);
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.dark-mode-wrapper.dark-mode button:not(.ant-btn):hover {
+  background-color: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* 图标样式增强 */
+.dark-mode-wrapper.dark-mode .anticon {
+  color: rgba(255, 255, 255, 0.85);
+} 

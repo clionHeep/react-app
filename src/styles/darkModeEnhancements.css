@@ -1,0 +1,272 @@
+/* 深色模式下的全局增强样式 */
+
+/* 为深色模式应用主题增强 */
+[data-theme='dark'] {
+  /* 提高表单控件在深色模式下的对比度 */
+  --form-control-bg: rgba(255, 255, 255, 0.08);
+  --form-control-border: rgba(255, 255, 255, 0.15);
+  --form-control-focus-border: rgba(255, 255, 255, 0.25);
+  
+  /* 增强文本可见度 */
+  --text-primary: rgba(255, 255, 255, 0.95);
+  --text-secondary: rgba(255, 255, 255, 0.85);
+  --text-tertiary: rgba(255, 255, 255, 0.65);
+  
+  /* 提高内容区背景 */
+  --content-bg: #1f1f1f;
+  --content-bg-elevated: #2d2d2d;
+}
+
+/* 提高所有文本元素的可见度 */
+[data-theme='dark'] body {
+  color: var(--text-primary);
+}
+
+[data-theme='dark'] .ant-typography,
+[data-theme='dark'] p,
+[data-theme='dark'] span,
+[data-theme='dark'] div {
+  color: var(--text-primary);
+}
+
+/* 表格在深色模式下的改进 */
+[data-theme='dark'] .ant-table {
+  background-color: transparent;
+  color: var(--text-primary);
+}
+
+[data-theme='dark'] .ant-table-thead > tr > th {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+[data-theme='dark'] .ant-table-tbody > tr > td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+}
+
+[data-theme='dark'] .ant-table-tbody > tr:hover > td {
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+/* 表格文本颜色增强 */
+[data-theme='dark'] .ant-table-cell {
+  color: var(--text-secondary);
+}
+
+/* 卡片在深色模式下的改进 */
+[data-theme='dark'] .ant-card {
+  background-color: var(--content-bg);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+[data-theme='dark'] .ant-card-head {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--text-primary);
+}
+
+/* 表单控件在深色模式下的改进 */
+[data-theme='dark'] .ant-input,
+[data-theme='dark'] .ant-select-selector,
+[data-theme='dark'] .ant-picker,
+[data-theme='dark'] .ant-input-number,
+[data-theme='dark'] .ant-input-affix-wrapper {
+  background-color: var(--form-control-bg);
+  border-color: var(--form-control-border);
+  color: var(--text-primary);
+}
+
+[data-theme='dark'] .ant-input:hover,
+[data-theme='dark'] .ant-select-selector:hover,
+[data-theme='dark'] .ant-picker:hover,
+[data-theme='dark'] .ant-input-number:hover,
+[data-theme='dark'] .ant-input-affix-wrapper:hover {
+  border-color: var(--form-control-focus-border);
+}
+
+/* 确保输入框文本清晰可见 */
+[data-theme='dark'] .ant-input::placeholder {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+/* 按钮在深色模式下的改进 */
+[data-theme='dark'] .ant-btn:not(.ant-btn-primary):not(.ant-btn-dangerous):not(.ant-btn-link) {
+  border-color: rgba(255, 255, 255, 0.2);
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+[data-theme='dark'] .ant-btn:not(.ant-btn-primary):not(.ant-btn-dangerous):not(.ant-btn-link):hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* 确保字体颜色足够明亮 */
+[data-theme='dark'] .ant-btn {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* 强化主按钮对比度 */
+[data-theme='dark'] .ant-btn-primary {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+/* 排版在深色模式下的改进 */
+[data-theme='dark'] .ant-typography {
+  color: var(--text-primary);
+}
+
+[data-theme='dark'] h1.ant-typography,
+[data-theme='dark'] h2.ant-typography,
+[data-theme='dark'] h3.ant-typography,
+[data-theme='dark'] h4.ant-typography {
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* 提高模态框等组件在深色模式下的可见度 */
+[data-theme='dark'] .ant-modal-content,
+[data-theme='dark'] .ant-drawer-content {
+  background-color: var(--content-bg);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme='dark'] .ant-modal-header,
+[data-theme='dark'] .ant-drawer-header {
+  background-color: var(--content-bg);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--text-primary);
+}
+
+/* 提高下拉菜单在深色模式下的可见度 */
+[data-theme='dark'] .ant-dropdown-menu {
+  background-color: var(--content-bg-elevated);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme='dark'] .ant-dropdown-menu-item {
+  color: var(--text-primary);
+}
+
+[data-theme='dark'] .ant-dropdown-menu-item:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+/* 确保链接在深色模式下的可见度 */
+[data-theme='dark'] a {
+  color: #4dabf7;
+  text-decoration: none;
+}
+
+[data-theme='dark'] a:hover {
+  color: #74c0fc;
+  text-decoration: underline;
+}
+
+/* 确保提示和通知组件在深色模式下的对比度 */
+[data-theme='dark'] .ant-message-notice-content {
+  background-color: var(--content-bg-elevated);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.5);
+  color: var(--text-primary);
+}
+
+[data-theme='dark'] .ant-notification-notice {
+  background-color: var(--content-bg-elevated);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.5);
+  color: var(--text-primary);
+}
+
+/* 分割线在深色模式下的改进 */
+[data-theme='dark'] .ant-divider {
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* 增强标签页与其内容的对比度 */
+[data-theme='dark'] .ant-tabs-tab {
+  color: var(--text-tertiary);
+}
+
+[data-theme='dark'] .ant-tabs-tab:hover {
+  color: var(--text-primary);
+}
+
+[data-theme='dark'] .ant-tabs-tab-active {
+  color: #4dabf7 !important;
+}
+
+[data-theme='dark'] .ant-tabs-content {
+  color: var(--text-primary);
+}
+
+/* 增强菜单项可见度 */
+[data-theme='dark'] .ant-menu {
+  background: transparent;
+}
+
+[data-theme='dark'] .ant-menu-item {
+  color: var(--text-secondary);
+}
+
+[data-theme='dark'] .ant-menu-item:hover {
+  color: var(--text-primary);
+}
+
+[data-theme='dark'] .ant-menu-item-selected {
+  color: #4dabf7 !important;
+  background-color: rgba(77, 171, 247, 0.1) !important;
+}
+
+/* 确保弹出提示组件文本清晰 */
+[data-theme='dark'] .ant-tooltip-inner,
+[data-theme='dark'] .ant-popover-inner {
+  background-color: var(--content-bg-elevated);
+  color: var(--text-primary);
+}
+
+/* 增强内容区块的可见度 */
+[data-theme='dark'] .ant-layout-content {
+  background-color: rgba(0, 0, 0, 0.2);
+  color: var(--text-primary);
+}
+
+/* 增强表单标签可读性 */
+[data-theme='dark'] .ant-form-item-label > label {
+  color: var(--text-secondary);
+}
+
+/* 增强步骤条可见度 */
+[data-theme='dark'] .ant-steps-item-title {
+  color: var(--text-secondary);
+}
+
+[data-theme='dark'] .ant-steps-item-description {
+  color: var(--text-tertiary);
+}
+
+[data-theme='dark'] .ant-steps-item-finish .ant-steps-item-title,
+[data-theme='dark'] .ant-steps-item-process .ant-steps-item-title {
+  color: var(--text-primary);
+}
+
+/* 确保选择菜单项可见 */
+[data-theme='dark'] .ant-select-item-option {
+  color: var(--text-secondary);
+}
+
+[data-theme='dark'] .ant-select-item-option-active {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+}
+
+[data-theme='dark'] .ant-select-item-option-selected {
+  background-color: rgba(77, 171, 247, 0.15);
+  color: var(--text-primary);
+}
+
+/* 增强标签可见度 */
+[data-theme='dark'] .ant-tag {
+  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.06);
+} 

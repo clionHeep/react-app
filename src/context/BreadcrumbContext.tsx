@@ -8,7 +8,7 @@ import React, {
   useEffect,
   useCallback,
 } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 // 面包屑项类型
 export interface BreadcrumbItem {
@@ -23,6 +23,7 @@ interface BreadcrumbContextType {
   addBreadcrumb: (item: BreadcrumbItem) => void;
   removeBreadcrumb: (key: string) => void;
   setCurrentPath: (path: string) => void;
+  currentPath: string;
 }
 
 // 路径到面包屑标题的映射，可以扩展更多
@@ -53,6 +54,11 @@ export const BreadcrumbProvider: React.FC<{ children: ReactNode }> = ({
     { key: "home", title: "首页", path: "/" },
   ]);
   const pathname = usePathname();
+  const router = useRouter();
+  // 用于跟踪最近删除的项，防止在导航过程中重新添加
+  const [recentlyRemoved, setRecentlyRemoved] = useState<{key: string, timestamp: number} | null>(null);
+  // 当前活动路径
+  const [currentPath, setCurrentActivePath] = useState<string>("/");
 
   // 添加面包屑
   const addBreadcrumb = (item: BreadcrumbItem) => {
@@ -69,20 +75,59 @@ export const BreadcrumbProvider: React.FC<{ children: ReactNode }> = ({
 
   // 移除面包屑
   const removeBreadcrumb = (key: string) => {
-    setBreadcrumbs((prev) => prev.filter((item) => item.key !== key));
+    // 记录最近删除的项
+    setRecentlyRemoved({ key, timestamp: Date.now() });
+    
+    setBreadcrumbs((prev) => {
+      // 找到要删除的项和它的索引
+      const itemIndex = prev.findIndex(item => item.key === key);
+      const itemToRemove = prev.find(item => item.key === key);
+      
+      // 如果找不到项，直接返回原数组
+      if (itemIndex === -1 || !itemToRemove) return prev;
+      
+      // 检查是否是当前项（当前活动路径）
+      const isCurrentItem = itemToRemove.path === currentPath;
+      
+      // 获取上一个导航项（如果存在）
+      const prevItem = isCurrentItem && itemIndex > 0 ? prev[itemIndex - 1] : null;
+      
+      // 删除当前项，如果删除的是当前路径且有上一项则导航到上一项
+      if (isCurrentItem && prevItem) {
+        // 更新当前活动路径
+        setCurrentActivePath(prevItem.path);
+        // 使用setTimeout确保状态更新完成后再导航
+        setTimeout(() => {
+          router.push(prevItem.path);
+        }, 0);
+      }
+      
+      // 返回过滤后的数组
+      return prev.filter((item) => item.key !== key);
+    });
   };
 
   // 根据当前路径设置活动的面包屑
   const setCurrentPath = useCallback((path: string) => {
+    // 更新当前活动路径
+    setCurrentActivePath(path);
+    
     const title = pathTitleMap[path] || path.split('/').pop() || path;
     const key = path.replace(/\//g, '-').slice(1) || 'home';
     
+    // 检查是否存在相同路径的面包屑
     const exists = breadcrumbs.some(crumb => crumb.path === path);
     
-    if (!exists && path !== '/') {
+    // 检查是否是最近刚刚删除的项（最近5秒内）
+    const isRecentlyRemoved = recentlyRemoved && 
+                             recentlyRemoved.key === key && 
+                             (Date.now() - recentlyRemoved.timestamp < 5000);
+    
+    // 如果不存在且不是主页，且不是最近删除的，则添加
+    if (!exists && path !== '/' && !isRecentlyRemoved) {
       addBreadcrumb({ key, title, path });
     }
-  }, [breadcrumbs, addBreadcrumb]);
+  }, [breadcrumbs, addBreadcrumb, recentlyRemoved]);
 
   // 初始化和路径变化时更新面包屑
   useEffect(() => {
@@ -93,7 +138,7 @@ export const BreadcrumbProvider: React.FC<{ children: ReactNode }> = ({
 
   return (
     <BreadcrumbContext.Provider
-      value={{ breadcrumbs, addBreadcrumb, removeBreadcrumb, setCurrentPath }}
+      value={{ breadcrumbs, addBreadcrumb, removeBreadcrumb, setCurrentPath, currentPath }}
     >
       {children}
     </BreadcrumbContext.Provider>

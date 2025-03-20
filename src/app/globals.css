@@ -241,7 +241,7 @@ body {
 }
 
 /* ===== 官方风格顶部布局修复 ===== */
-/* 清除之前所有可能冲突的样式 */
+/* 清除header之前所有可能冲突的样式 */
 .ant-layout-header .ant-menu,
 .ant-menu-horizontal,
 .ant-menu-overflow,
@@ -257,7 +257,7 @@ body {
 }
 
 /* 恢复菜单自然布局 */
-.ant-layout-header {
+.ant-layout- {
   display: flex !important;
   align-items: center !important;
   padding: 0 24px !important;
@@ -352,7 +352,7 @@ body {
 .ant-layout-header {
   display: flex !important;
   align-items: center !important;
-  padding: 0 50px !important;
+  padding: 0 30px 0 10px !important;
   height: 64px !important;
   line-height: 64px !important;
 }
@@ -360,7 +360,7 @@ body {
 /* Logo样式 */
 .ant-layout-header>div:first-child:not(.ant-menu) {
   float: left !important;
-  margin-right: 24px !important;
+  margin-right: 10px !important;
 }
 
 /* 菜单占据剩余空间，但可以收缩 */

@@ -1,10 +1,13 @@
 "use client";
 
 import "@/app/globals.css";
+import "@/styles/darkModeEnhancements.css";
+import "@/styles/darkModeWrapperStyles.css";
 import { Inter } from "next/font/google";
 import { AntdRegistry } from "@ant-design/nextjs-registry";
 import { ConfigProvider, theme } from "antd";
 import { usePathname } from "next/navigation";
+import { useState, useEffect } from "react";
 import AuthGuard from "@/components/auth/AuthGuard";
 import MainLayout from "@/components/layouts/MainLayout";
 import { BreadcrumbProvider } from "@/context/BreadcrumbContext";
@@ -18,6 +21,21 @@ export default function RootLayout({
 }) {
   const pathname = usePathname();
   const isLoginPage = pathname === "/login";
+  
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme-mode');
+    
+    if (savedTheme) {
+      setIsDarkMode(savedTheme === 'dark');
+    } else {
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      setIsDarkMode(prefersDark);
+    }
+    
+    document.body.setAttribute('data-theme', isDarkMode ? 'dark' : 'light');
+  }, [isDarkMode]);
 
   return (
     <html lang="zh-CN">
@@ -26,7 +44,8 @@ export default function RootLayout({
         <meta name="description" content="展示不同的布局选项和主题设置" />
       </head>
       <body
-        className={`${inter.className} overflow-auto antialiased light-mode`}
+        className={`${inter.className} overflow-auto antialiased ${isDarkMode ? 'dark-mode' : 'light-mode'}`}
+        data-theme={isDarkMode ? 'dark' : 'light'}
       >
         <AntdRegistry>
           <ConfigProvider
@@ -35,7 +54,7 @@ export default function RootLayout({
                 colorPrimary: "#006bfa",
                 borderRadius: 6,
               },
-              algorithm: theme.defaultAlgorithm,
+              algorithm: isDarkMode ? theme.darkAlgorithm : theme.defaultAlgorithm,
             }}
           >
             <BreadcrumbProvider>
@@ -43,7 +62,9 @@ export default function RootLayout({
                 children
               ) : (
                 <AuthGuard>
-                  <MainLayout>{children}</MainLayout>
+                  <MainLayout isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode}>
+                    {children}
+                  </MainLayout>
                 </AuthGuard>
               )}
             </BreadcrumbProvider>
