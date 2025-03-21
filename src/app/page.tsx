@@ -1,6 +1,14 @@
-'use client';
+// import { db } from "@/db";
 
 export default function Home() {
+  // db.user
+  // .update({
+  //   where: { email: "admin@example.com" },
+  //   data: { password: "admin123" },
+  // })
+  // .then((user) => {
+  //   console.log("密码更新成功:", user);
+  // });
   return (
     <div style={{ padding: 24, borderRadius: 8 }}>
       <h1>欢迎使用多布局演示</h1>

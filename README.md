@@ -12,6 +12,12 @@ yarn dev
 pnpm dev
 # or
 bun dev
+
+npx prisma db push
+
+npx prisma --datasource-provider mysql
+
+npx prisma studio
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
@@ -34,3 +40,89 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+# 认证系统说明
+
+本系统实现了如下认证功能：
+1. 账号密码登录 - 用户只能通过用户名+密码登录系统
+2. 忘记密码 - 通过邮箱或手机验证码重置密码
+3. 用户注册 - 新用户需要使用用户名、邮箱（可选）和手机号（可选）注册系统
+
+## 数据库迁移
+
+由于修改了数据库模型，需要执行以下命令生成迁移：
+
+```bash
+# 如果是全新安装（没有现有用户数据）
+npx prisma db push
+
+# 如果有现有数据（为已存在的用户分配用户名）
+npx prisma migrate dev --name add_username_and_phone
+```
+
+## API接口
+
+### 用户注册
+```
+POST /api/auth/register
+{
+  "username": "用户名", // 必填
+  "password": "密码", // 必填
+  "email": "example@example.com", // 可选
+  "phone": "13800138000", // 可选
+  "name": "真实姓名" // 可选
+}
+```
+
+### 账号密码登录
+```
+POST /api/auth/login
+{
+  "username": "用户名",
+  "password": "密码"
+}
+```
+
+### 发送重置密码邮箱验证码
+```
+POST /api/auth/forgot-password/email
+{
+  "email": "example@example.com"
+}
+```
+
+### 发送重置密码短信验证码
+```
+POST /api/auth/forgot-password/phone
+{
+  "phone": "13800138000"
+}
+```
+
+### 重置密码
+```
+POST /api/auth/reset-password
+{
+  "email": "example@example.com", // 邮箱和手机号二选一
+  "phone": "13800138000",
+  "code": "123456",
+  "newPassword": "newpassword123"
+}
+```
+
+## 注意事项
+
+1. 验证码有效期为10分钟
+2. 同一邮箱或手机号1分钟内只能请求一次验证码
+3. 验证码6位数字
+4. 验证码使用一次后失效
+5. 现有用户需要分配唯一用户名
+6. 用户名、邮箱和手机号都是唯一的，不能重复注册
+
+## TypeScript类型问题解决
+
+由于数据库模型已经更新，会出现类型不匹配的问题。执行以下命令重新生成Prisma客户端来解决这个问题：
+
+```bash
+npx prisma generate
+```

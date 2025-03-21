@@ -1,0 +1,150 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model menu {
+  id         Int        @id @default(autoincrement())
+  username   String     @unique(map: "Menu_username_key")
+  name       String
+  path       String?
+  component  String?
+  redirect   String?
+  icon       String?
+  sort       Int        @default(0)
+  hidden     Boolean    @default(false)
+  parentId   Int?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime
+  menu       menu?      @relation("menuTomenu", fields: [parentId], references: [id], map: "Menu_parentId_fkey")
+  other_menu menu[]     @relation("menuTomenu")
+  rolemenu   rolemenu[]
+
+  @@index([parentId], map: "Menu_parentId_fkey")
+}
+
+model permission {
+  id             Int              @id @default(autoincrement())
+  code           String           @unique(map: "Permission_code_key")
+  name           String
+  description    String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime
+  rolepermission rolepermission[]
+}
+
+model post {
+  id        String   @id
+  title     String
+  content   String?
+  published Boolean  @default(false)
+  authorId  Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  user      user?    @relation(fields: [authorId], references: [id], map: "Post_authorId_fkey")
+
+  @@index([authorId], map: "Post_authorId_fkey")
+}
+
+model refreshtoken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique(map: "RefreshToken_token_key")
+  userId    Int      @unique(map: "RefreshToken_userId_key")
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  user      user     @relation(fields: [userId], references: [id], onDelete: Cascade, map: "RefreshToken_userId_fkey")
+}
+
+model role {
+  id             Int              @id @default(autoincrement())
+  name           String           @unique(map: "Role_name_key")
+  description    String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime
+  rolemenu       rolemenu[]
+  rolepermission rolepermission[]
+  userrole       userrole[]
+}
+
+model rolemenu {
+  id        Int      @id @default(autoincrement())
+  roleId    Int
+  menuId    Int
+  createdAt DateTime @default(now())
+  menu      menu     @relation(fields: [menuId], references: [id], onDelete: Cascade, map: "RoleMenu_menuId_fkey")
+  role      role     @relation(fields: [roleId], references: [id], onDelete: Cascade, map: "RoleMenu_roleId_fkey")
+
+  @@unique([roleId, menuId], map: "RoleMenu_roleId_menuId_key")
+  @@index([menuId], map: "RoleMenu_menuId_fkey")
+}
+
+model rolepermission {
+  id           Int        @id @default(autoincrement())
+  roleId       Int
+  permissionId Int
+  createdAt    DateTime   @default(now())
+  permission   permission @relation(fields: [permissionId], references: [id], onDelete: Cascade, map: "RolePermission_permissionId_fkey")
+  role         role       @relation(fields: [roleId], references: [id], onDelete: Cascade, map: "RolePermission_roleId_fkey")
+
+  @@unique([roleId, permissionId], map: "RolePermission_roleId_permissionId_key")
+  @@index([permissionId], map: "RolePermission_permissionId_fkey")
+}
+
+model user {
+  id           Int           @id @default(autoincrement())
+  username     String        @unique(map: "User_username_key")
+  email        String?       @unique(map: "User_email_key")
+  phone        String?       @unique(map: "User_phone_key")
+  password     String
+  name         String?
+  avatar       String?
+  gender       String?
+  birthday     DateTime?
+  address      String?
+  bio          String?
+  lastLoginAt  DateTime?
+  lastLoginIp  String?
+  status       user_status   @default(ACTIVE)
+  roles        String        @default("user")
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  post         post[]
+  refreshtoken refreshtoken?
+  userrole     userrole[]
+}
+
+model userrole {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  roleId    Int
+  createdAt DateTime @default(now())
+  role      role     @relation(fields: [roleId], references: [id], onDelete: Cascade, map: "UserRole_roleId_fkey")
+  user      user     @relation(fields: [userId], references: [id], onDelete: Cascade, map: "UserRole_userId_fkey")
+
+  @@unique([userId, roleId], map: "UserRole_userId_roleId_key")
+  @@index([roleId], map: "UserRole_roleId_fkey")
+}
+
+model verificationcode {
+  id        Int      @id @default(autoincrement())
+  type      String // email 或 phone
+  target    String // 邮箱或手机号
+  code      String // 验证码
+  expiresAt DateTime // 过期时间
+  used      Boolean  @default(false) // 是否已使用
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([target, type])
+}
+
+enum user_status {
+  ACTIVE
+  INACTIVE
+  LOCKED
+}

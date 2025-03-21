@@ -11,6 +11,8 @@ import { useState, useEffect } from "react";
 import AuthGuard from "@/components/auth/AuthGuard";
 import MainLayout from "@/components/layouts/MainLayout";
 import { BreadcrumbProvider } from "@/context/BreadcrumbContext";
+import { isPublicRoute } from "@/config/routes";
+import { MessageProvider } from '@/providers/MessageProvider';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -20,21 +22,23 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const isLoginPage = pathname === "/login";
-  
+  const isLoginPage = isPublicRoute(pathname);
+
   const [isDarkMode, setIsDarkMode] = useState(false);
-  
+
   useEffect(() => {
-    const savedTheme = localStorage.getItem('theme-mode');
-    
+    const savedTheme = localStorage.getItem("theme-mode");
+
     if (savedTheme) {
-      setIsDarkMode(savedTheme === 'dark');
+      setIsDarkMode(savedTheme === "dark");
     } else {
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const prefersDark = window.matchMedia(
+        "(prefers-color-scheme: dark)"
+      ).matches;
       setIsDarkMode(prefersDark);
     }
-    
-    document.body.setAttribute('data-theme', isDarkMode ? 'dark' : 'light');
+
+    document.body.setAttribute("data-theme", isDarkMode ? "dark" : "light");
   }, [isDarkMode]);
 
   return (
@@ -44,30 +48,36 @@ export default function RootLayout({
         <meta name="description" content="展示不同的布局选项和主题设置" />
       </head>
       <body
-        className={`${inter.className} overflow-auto antialiased ${isDarkMode ? 'dark-mode' : 'light-mode'}`}
-        data-theme={isDarkMode ? 'dark' : 'light'}
+        data-theme={isDarkMode ? "dark" : "light"}
+        className={`${inter.className} min-h-screen`}
       >
         <AntdRegistry>
           <ConfigProvider
             theme={{
-              token: {
-                colorPrimary: "#006bfa",
-                borderRadius: 6,
+              algorithm: isDarkMode
+                ? theme.darkAlgorithm
+                : theme.defaultAlgorithm,
+              components: {
+                Layout: {
+                  bodyBg: isDarkMode ? "#141414" : "#f0f2f5",
+                  lightSiderBg: isDarkMode ? "#1f1f1f" : "#fff",
+                  headerBg: isDarkMode ? "#141414" : "#fff",
+                  siderBg: isDarkMode ? "#1f1f1f" : "#fff",
+                },
               },
-              algorithm: isDarkMode ? theme.darkAlgorithm : theme.defaultAlgorithm,
             }}
           >
-            <BreadcrumbProvider>
-              {isLoginPage ? (
-                children
-              ) : (
-                <AuthGuard>
-                  <MainLayout isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode}>
-                    {children}
-                  </MainLayout>
-                </AuthGuard>
-              )}
-            </BreadcrumbProvider>
+            <MessageProvider>
+              <BreadcrumbProvider>
+                {isLoginPage ? (
+                  children
+                ) : (
+                  <AuthGuard>
+                    <MainLayout>{children}</MainLayout>
+                  </AuthGuard>
+                )}
+              </BreadcrumbProvider>
+            </MessageProvider>
           </ConfigProvider>
         </AntdRegistry>
       </body>

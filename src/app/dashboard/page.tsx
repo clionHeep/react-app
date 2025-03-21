@@ -1,9 +1,9 @@
+"use client";
 import React from "react";
-import { Card } from "antd";
-import Typography from "antd/es/typography";
+import { Card, Typography } from "antd";
 const { Title, Paragraph } = Typography;
 
-export default function DashboardPage() {
+export default function Dashboard() {
   return (
     <div className="dashboard-container" style={{ padding: "24px" }}>
       <Title level={2}>仪表盘</Title>
