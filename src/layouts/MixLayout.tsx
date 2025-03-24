@@ -2,22 +2,20 @@
 
 import React, { useEffect, useState } from "react";
 import { Layout, Menu, theme, Button } from "antd";
-import {
-  MenuFoldOutlined,
-  MenuUnfoldOutlined,
-} from "@ant-design/icons";
+import { MenuFoldOutlined, MenuUnfoldOutlined } from "@ant-design/icons";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import type { LayoutProps } from "@/types";
 import Logo from "@/components/common/Logo";
 import UserInfo from "@/components/user/UserInfo";
 import FullscreenButton from "@/components/common/FullscreenButton";
-import { menuItems } from "@/components/layouts/constants";
+import { defaultMenuItems } from "@/routes/constants";
 import StaticLoadingPlaceholder from "@/components/common/StaticLoadingPlaceholder";
 import BreadcrumbHandler from "@/components/layouts/BreadcrumbHandler";
 import { getBaseStyles } from "@/styles/layoutStyles";
 import { getMenuStyles, getSiderScrollStyles } from "@/styles/menuStyles";
 import { isDarkMode } from "@/styles/themeUtils";
+import { isExternal, resolvePath } from "@/routes/router-utils";
 
 const { Header, Content, Sider } = Layout;
 
@@ -65,15 +63,15 @@ function getLabelProp<T extends React.ReactNode, K extends string>(
 
 // 辅助函数，检查并获取href
 function getHref(label: React.ReactNode): string | undefined {
-  return getLabelProp(label, 'href') as string | undefined;
+  return getLabelProp(label, "href") as string | undefined;
 }
 
 // 辅助函数，检查label是否有href
 function hasValidHref(label: React.ReactNode): boolean {
   return (
-    React.isValidElement(label) && 
-    label.type === Link && 
-    !!getLabelProp(label, 'href')
+    React.isValidElement(label) &&
+    label.type === Link &&
+    !!getLabelProp(label, "href")
   );
 }
 
@@ -88,14 +86,14 @@ interface RouterType {
 const handleMainMenuClick = (
   { key }: { key: string },
   {
-    menuItems,
+    defaultMenuItems,
     setActiveMainMenu,
     setHasSubMenu,
     setActiveSubMenu,
     pathname,
     router,
   }: {
-    menuItems: TypedMenuItem[];
+    defaultMenuItems: TypedMenuItem[];
     setActiveMainMenu: (key: string) => void;
     setHasSubMenu: (has: boolean) => void;
     setActiveSubMenu: (key: string | null) => void;
@@ -107,9 +105,9 @@ const handleMainMenuClick = (
   setActiveMainMenu(key);
 
   // 检查选中的菜单是否有子菜单
-  if (!Array.isArray(menuItems)) return;
+  if (!Array.isArray(defaultMenuItems)) return;
 
-  const selectedMenu = menuItems.find(
+  const selectedMenu = defaultMenuItems.find(
     (item) =>
       item && typeof item === "object" && "key" in item && item.key === key
   ) as CustomMenuItem | undefined;
@@ -123,7 +121,7 @@ const handleMainMenuClick = (
 
   setHasSubMenu(!!hasChildren);
 
-  // 如果有子菜单，默认选中第一个子菜单
+  // 如果有子菜单，自动触发第一个子菜单的跳转
   if (
     hasChildren &&
     selectedMenu.children &&
@@ -138,7 +136,7 @@ const handleMainMenuClick = (
     ) {
       setActiveSubMenu(String(firstSubItem.key));
 
-      // 获取子菜单路径并导航，但不刷新页面
+      // 获取子菜单路径并导航
       if (
         firstSubItem.label &&
         React.isValidElement(firstSubItem.label) &&
@@ -146,21 +144,61 @@ const handleMainMenuClick = (
         hasValidHref(firstSubItem.label)
       ) {
         const targetPath = getHref(firstSubItem.label);
-        console.log("导航到子菜单路径:", targetPath);
+        console.log("自动导航到第一个子菜单路径:", targetPath);
 
-        // 如果当前路径与目标路径不同，才进行导航，避免不必要的刷新
-        if (pathname !== targetPath && targetPath) {
-          // 使用 Next.js router.push 进行导航，同时保持状态
+        if (targetPath) {
+          // 外部链接使用window.open打开
+          if (isExternal(targetPath)) {
+            window.open(targetPath, "_blank");
+            return;
+          }
+          
+          // 内部链接使用router.push导航
           router.push(targetPath);
+        }
+      } else {
+        // 如果子菜单项没有Link标签，则尝试使用key作为路径
+        const subItemKey = String(firstSubItem.key);
+        if (isExternal(subItemKey)) {
+          window.open(subItemKey, "_blank");
+          return;
+        }
+        
+        const result = resolvePath(subItemKey);
+        if (typeof result === "string") {
+          router.push(result);
+        } else if (result) {
+          const { path, query } = result;
+          const queryString = new URLSearchParams(query).toString();
+          const url = queryString ? `${path}?${queryString}` : path;
+          router.push(url);
         }
       }
     } else {
       setActiveSubMenu(null);
     }
   } else {
+    // 没有子菜单，直接导航到主菜单路径
     setActiveSubMenu(null);
 
-    // 没有子菜单，直接导航到主菜单路径，但也使用 router.push 保持面包屑状态
+    // 外部链接使用window.open打开
+    if (isExternal(key)) {
+      window.open(key, "_blank");
+      return;
+    }
+    
+    // 内部路径导航
+    const result = resolvePath(key);
+    if (typeof result === "string") {
+      router.push(result);
+    } else if (result) {
+      const { path, query } = result;
+      const queryString = new URLSearchParams(query).toString();
+      const url = queryString ? `${path}?${queryString}` : path;
+      router.push(url);
+    }
+
+    // 如果有Link标签，则使用其href
     if (
       selectedMenu.label &&
       React.isValidElement(selectedMenu.label) &&
@@ -170,9 +208,7 @@ const handleMainMenuClick = (
       const targetPath = getHref(selectedMenu.label);
       console.log("导航到主菜单路径:", targetPath);
 
-      // 如果当前路径与目标路径不同，才进行导航
       if (pathname !== targetPath && targetPath) {
-        // 使用 router.push 进行导航以保持面包屑状态
         router.push(targetPath);
       }
     }
@@ -183,13 +219,13 @@ const handleMainMenuClick = (
 const handleSubMenuClick = (
   { key }: { key: string },
   {
-    menuItems,
+    defaultMenuItems,
     activeMainMenu,
     setActiveSubMenu,
     pathname,
     router,
   }: {
-    menuItems: TypedMenuItem[];
+    defaultMenuItems: TypedMenuItem[];
     activeMainMenu: string | null;
     setActiveSubMenu: (key: string) => void;
     pathname: string | null;
@@ -198,11 +234,28 @@ const handleSubMenuClick = (
 ) => {
   console.log("子菜单点击:", key);
   setActiveSubMenu(key);
+  
+  // 外部链接使用window.open打开
+  if (isExternal(key)) {
+    window.open(key, "_blank");
+    return;
+  }
 
-  // 查找子菜单路径
-  if (!Array.isArray(menuItems) || !activeMainMenu) return;
+  // 内部路径导航
+  const result = resolvePath(key);
+  if (typeof result === "string") {
+    router.push(result);
+  } else if (result) {
+    const { path, query } = result;
+    const queryString = new URLSearchParams(query).toString();
+    const url = queryString ? `${path}?${queryString}` : path;
+    router.push(url);
+  }
 
-  const currentMainItem = menuItems.find(
+  // 查找子菜单项及其链接
+  if (!Array.isArray(defaultMenuItems) || !activeMainMenu) return;
+
+  const currentMainItem = defaultMenuItems.find(
     (item) =>
       item &&
       typeof item === "object" &&
@@ -219,7 +272,7 @@ const handleSubMenuClick = (
         child.key === key
     ) as CustomMenuItem | undefined;
 
-    // 获取子菜单路径并导航
+    // 如果子菜单项有Link标签，则使用其href
     if (
       selectedSubItem &&
       selectedSubItem.label &&
@@ -228,11 +281,9 @@ const handleSubMenuClick = (
       hasValidHref(selectedSubItem.label)
     ) {
       const targetPath = getHref(selectedSubItem.label);
-      console.log("导航到选中的子菜单路径:", targetPath);
+      console.log("导航到子菜单路径:", targetPath);
 
-      // 如果当前路径与目标路径不同，才进行导航
       if (pathname !== targetPath && targetPath) {
-        // 使用 Next.js router.push 进行导航，同时保持状态
         router.push(targetPath);
       }
     }
@@ -259,7 +310,7 @@ const MixLayout: React.FC<LayoutProps> = ({
   // 主菜单点击处理函数（保持对象引用稳定）
   const handleMainMenuClick_internal = (info: { key: string }) => {
     handleMainMenuClick(info, {
-      menuItems: menuItems as unknown as TypedMenuItem[], // 类型转换
+      defaultMenuItems: defaultMenuItems as unknown as TypedMenuItem[], // 类型转换
       setActiveMainMenu,
       setHasSubMenu,
       setActiveSubMenu,
@@ -271,7 +322,7 @@ const MixLayout: React.FC<LayoutProps> = ({
   // 子菜单点击处理函数（保持对象引用稳定）
   const handleSubMenuClick_internal = (info: { key: string }) => {
     handleSubMenuClick(info, {
-      menuItems: menuItems as unknown as TypedMenuItem[], // 类型转换
+      defaultMenuItems: defaultMenuItems as unknown as TypedMenuItem[], // 类型转换
       activeMainMenu,
       setActiveSubMenu,
       pathname,
@@ -281,15 +332,15 @@ const MixLayout: React.FC<LayoutProps> = ({
 
   // 根据路径查找当前活动菜单
   useEffect(() => {
-    if (!pathname || !menuItems) return;
+    if (!pathname || !defaultMenuItems) return;
 
     // 尝试根据当前路径找到匹配的菜单项
     let foundMainMenu: string | null = null;
     let foundSubMenu: string | null = null;
 
     // 遍历菜单项
-    if (Array.isArray(menuItems)) {
-      for (const item of menuItems) {
+    if (Array.isArray(defaultMenuItems)) {
+      for (const item of defaultMenuItems) {
         if (!item || typeof item !== "object") continue;
 
         // 使用类型断言处理菜单项
@@ -338,7 +389,7 @@ const MixLayout: React.FC<LayoutProps> = ({
       setActiveMainMenu(foundMainMenu);
 
       // 查找是否有子菜单
-      const mainItem = menuItems.find(
+      const mainItem = defaultMenuItems.find(
         (item) =>
           item &&
           typeof item === "object" &&
@@ -369,15 +420,15 @@ const MixLayout: React.FC<LayoutProps> = ({
         }
       }
     }
-  }, [pathname, menuItems]);
+  }, [pathname, defaultMenuItems]);
 
   // 仅在客户端执行此代码
   useEffect(() => {
     setMounted(true);
 
     // 默认选择第一个菜单项（如果没有根据路径匹配到）
-    if (!activeMainMenu && menuItems && menuItems.length > 0) {
-      const firstItem = menuItems[0];
+    if (!activeMainMenu && defaultMenuItems && defaultMenuItems.length > 0) {
+      const firstItem = defaultMenuItems[0];
       if (firstItem && typeof firstItem === "object" && "key" in firstItem) {
         const mainMenuKey = String(firstItem.key);
         setActiveMainMenu(mainMenuKey);
@@ -410,16 +461,16 @@ const MixLayout: React.FC<LayoutProps> = ({
   }, [activeMainMenu]);
 
   // 获取顶部主菜单项
-  const getMainMenuItems = () => {
-    // 如果menuItems未定义，返回空数组
-    if (!menuItems) return [];
+  const getMaindefaultMenuItems = () => {
+    // 如果defaultMenuItems未定义，返回空数组
+    if (!defaultMenuItems) return [];
 
-    return menuItems.map((item) => {
+    return defaultMenuItems.map((item) => {
       // 确保item有正确的类型和非null
-      if (!item) return { key: 'empty' }; // 提供默认值
-      
+      if (!item) return { key: "empty" }; // 提供默认值
+
       const typedItem = item as unknown as TypedMenuItem;
-      
+
       let path = null;
       if (
         typedItem.label &&
@@ -432,8 +483,11 @@ const MixLayout: React.FC<LayoutProps> = ({
 
       // 检查是否应该应用activeParent类
       // 当主菜单项的key与当前选中的activeMainMenu相同，并且当前有子菜单选中时
-      const isActiveParent = activeMainMenu === typedItem.key && hasSubMenu && activeSubMenu !== null;
-      
+      const isActiveParent =
+        activeMainMenu === typedItem.key &&
+        hasSubMenu &&
+        activeSubMenu !== null;
+
       // 返回包含关键信息的菜单项
       return {
         key: typedItem.key,
@@ -442,18 +496,22 @@ const MixLayout: React.FC<LayoutProps> = ({
         // 将路径信息存储在自定义属性中
         path: path,
         // 当主菜单与子菜单对应的主菜单一致时，添加activeParent类名
-        className: isActiveParent ? 'activeParent' : '',
+        className: isActiveParent ? "activeParent" : "",
       };
     });
   };
 
   // 获取左侧子菜单项
-  const getSubMenuItems = () => {
-    if (!Array.isArray(menuItems) || !activeMainMenu) return [];
+  const getSubdefaultMenuItems = () => {
+    if (!Array.isArray(defaultMenuItems) || !activeMainMenu) return [];
 
     // 找到当前激活的主菜单
-    const activeMainItem = menuItems?.find(
-      (item) => item && typeof item === "object" && "key" in item && String(item.key) === activeMainMenu
+    const activeMainItem = defaultMenuItems?.find(
+      (item) =>
+        item &&
+        typeof item === "object" &&
+        "key" in item &&
+        String(item.key) === activeMainMenu
     ) as unknown as TypedMenuItem;
 
     // 如果没有找到活跃的主菜单项，或者没有子菜单，则返回空数组
@@ -464,7 +522,7 @@ const MixLayout: React.FC<LayoutProps> = ({
     // 映射子菜单项
     return activeMainItem.children.map((child) => {
       const typedChild = child as unknown as TypedMenuItem;
-      
+
       let path = null;
       if (
         typedChild.label &&
@@ -495,24 +553,20 @@ const MixLayout: React.FC<LayoutProps> = ({
   const styles = getBaseStyles(token);
 
   // 调试：显示菜单数据结构
-  console.log("菜单数据:", menuItems);
+  console.log("菜单数据:", defaultMenuItems);
 
   // 只在客户端渲染实际布局
   return (
     <Layout style={styles.layout}>
-      <Header
-        style={styles.header}
-      >
-        <style>
-          {getMenuStyles(token)}
-        </style>
+      <Header style={styles.header}>
+        <style>{getMenuStyles(token)}</style>
         <div style={{ display: "flex", alignItems: "center" }}>
           <Logo collapsed={false} />
         </div>
         <Menu
           mode="horizontal"
           selectedKeys={activeMainMenu ? [activeMainMenu] : []}
-          items={getMainMenuItems()}
+          items={getMaindefaultMenuItems()}
           onClick={handleMainMenuClick_internal}
           style={styles.menu}
           className="fixed-menu-items"
@@ -552,8 +606,8 @@ const MixLayout: React.FC<LayoutProps> = ({
               bottom: 0,
               background: token.colorBgContainer,
               fontSize: 14,
-              msOverflowStyle: "none", /* IE and Edge */
-              scrollbarWidth: "none", /* Firefox */
+              msOverflowStyle: "none" /* IE and Edge */,
+              scrollbarWidth: "none" /* Firefox */,
             }}
             width={200}
           >
@@ -578,7 +632,7 @@ const MixLayout: React.FC<LayoutProps> = ({
             <div className="menu-container">
               <Menu
                 mode="inline"
-                items={getSubMenuItems()}
+                items={getSubdefaultMenuItems()}
                 selectedKeys={activeSubMenu ? [activeSubMenu] : []}
                 onClick={handleSubMenuClick_internal}
                 style={{
@@ -617,12 +671,12 @@ const MixLayout: React.FC<LayoutProps> = ({
               minHeight: "calc(100vh - 184px)",
               fontSize: 14,
               // 增加深色模式下的阴影和边框以提高可见度
-              boxShadow: isDarkMode(token) 
-                ? '0 4px 16px rgba(0,0,0,0.5), 0 1px 4px rgba(255,255,255,0.05)'
-                : 'none',
+              boxShadow: isDarkMode(token)
+                ? "0 4px 16px rgba(0,0,0,0.5), 0 1px 4px rgba(255,255,255,0.05)"
+                : "none",
               border: isDarkMode(token)
-                ? '1px solid rgba(255, 255, 255, 0.15)'
-                : 'none',
+                ? "1px solid rgba(255, 255, 255, 0.15)"
+                : "none",
             }}
           >
             {children}

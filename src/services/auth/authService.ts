@@ -5,9 +5,9 @@ import { handleError, handleSuccess, showResponseMessage } from '@/utils/respons
 /**
  * 登录API
  */
-export const loginApi = async (email: string, password: string): Promise<LoginResponse> => {
+export const loginApi = async (username: string, password: string): Promise<LoginResponse> => {
   try {
-    const response = await httpClient.post('/api/auth/login', { email, password });
+    const response = await httpClient.post('/api/auth/login', { username, password });
     const result = handleSuccess<LoginResponse>(response);
     showResponseMessage(result);
     return result.data as LoginResponse;

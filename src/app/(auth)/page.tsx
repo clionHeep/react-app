@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Form, Input, Button, Alert, Typography, Card, message } from "antd";
-import { UserOutlined, LockOutlined, MailOutlined } from "@ant-design/icons";
+import { UserOutlined, LockOutlined } from "@ant-design/icons";
 import { loginApi, registerApi } from "@/services/auth/authService";
 import { showMessage } from "@/utils/message";
 import { AUTH_MESSAGES } from "@/constants/messages";
@@ -22,12 +22,12 @@ export default function AuthForm({ type }: AuthFormProps) {
   const [loading, setLoading] = useState(false);
   const [messageApi, contextHolder] = message.useMessage(); // 使用 Hook 方式
 
-  const handleLogin = async (values: { email: string; password: string }) => {
+  const handleLogin = async (values: { username: string; password: string }) => {
     setError("");
     setLoading(true);
 
     try {
-      const response = await loginApi(values.email, values.password);
+      const response = await loginApi(values.username, values.password);
       localStorage.setItem("accessToken", response.accessToken);
       localStorage.setItem("user", JSON.stringify(response.user));
 
@@ -64,7 +64,7 @@ export default function AuthForm({ type }: AuthFormProps) {
   };
 
   const handleRegister = async (values: {
-    email: string;
+    username: string;
     password: string;
     confirmPassword: string;
     name: string;
@@ -79,7 +79,7 @@ export default function AuthForm({ type }: AuthFormProps) {
 
     try {
       await registerApi({
-        email: values.email,
+        username: values.username,
         password: values.password,
         name: values.name,
       });
@@ -158,15 +158,14 @@ export default function AuthForm({ type }: AuthFormProps) {
               )}
 
               <Form.Item
-                name="email"
+                name="username"
                 rules={[
-                  { required: true, message: "请输入邮箱" },
-                  { type: "email", message: "请输入有效的邮箱地址" },
+                  { required: true, message: "请输入用户名" },
                 ]}
               >
                 <Input
-                  prefix={<MailOutlined className="text-gray-400" />}
-                  placeholder="邮箱"
+                  prefix={<UserOutlined className="text-gray-400" />}
+                  placeholder="用户名"
                   className="rounded"
                 />
               </Form.Item>
@@ -242,8 +241,8 @@ export default function AuthForm({ type }: AuthFormProps) {
             {isLogin && (
               <div className="text-center text-xs text-gray-400 mt-4">
                 <div>测试账户:</div>
-                <div>admin@example.com / admin123 (管理员)</div>
-                <div>user@example.com / user123 (普通用户)</div>
+                <div>admin / admin123 (管理员)</div>
+                <div>user / user123 (普通用户)</div>
               </div>
             )}
           </Card>

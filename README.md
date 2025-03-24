@@ -126,3 +126,32 @@ POST /api/auth/reset-password
 ```bash
 npx prisma generate
 ```
+
+# 新功能: Redis存储与访问统计
+
+## Redis集成
+
+项目已经集成了Redis，用于以下功能：
+
+1. 存储登录令牌 - 刷新令牌现在存储在Redis中，而不是数据库中，提高了性能和安全性
+2. 访问统计 - 记录总访问量和每日访问量
+
+## 访问统计API
+
+可以通过以下API访问站点访问统计数据：
+
+- `GET /stats/total` - 获取总访问量
+- `GET /stats/today` - 获取今日访问量
+- `GET /stats/daily/:date` - 获取指定日期的访问量（需要登录权限，日期格式：YYYY-MM-DD）
+- `GET /stats/recent/:days` - 获取最近n天的访问量（需要登录权限）
+
+## 设置Redis
+
+确保在开发环境中已安装并运行Redis服务器。配置环境变量：
+
+```bash
+# .env 文件
+REDIS_URL=redis://localhost:6379
+```
+
+对于生产环境，请设置实际的Redis服务器URL。

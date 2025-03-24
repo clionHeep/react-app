@@ -1,4 +1,4 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, UseGuards, Get, Req, UnauthorizedException } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus, UseGuards, Get, Req, UnauthorizedException, Query } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -7,6 +7,8 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import type { Request } from 'express';
 import type { UserInfo } from '../types/types';
+import { Roles } from '../decorators/roles.decorator';
+import { RolesGuard } from '../guards/roles.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -62,5 +64,17 @@ export class AuthController {
   @Get('profile')
   getProfile(@Req() req: Request) {
     return req.user;
+  }
+
+  /**
+   * 管理员查询Redis中的Token (仅限管理员)
+   * @param userId 可选的用户ID，如果提供则查询特定用户的token
+   * @returns token信息
+   */
+  @Get('tokens')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('管理员')
+  async getTokens(@Query('userId') userId?: string) {
+    return this.authService.findTokensInRedis(userId ? parseInt(userId, 10) : undefined);
   }
 }

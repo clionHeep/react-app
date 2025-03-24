@@ -5,6 +5,7 @@ import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { RegisterDto } from './dto/register.dto';
+import { RedisService } from '../redis/redis.service';
 
 interface UserRole {
   role: {
@@ -24,8 +25,13 @@ interface User {
 @Injectable()
 export class AuthService {
   private prisma: PrismaClient;
+  private readonly TOKEN_PREFIX = 'token:refresh:';
+  private readonly TOKEN_EXPIRY = 7 * 24 * 60 * 60; // 7天，单位为秒
 
-  constructor(private jwtService: JwtService) {
+  constructor(
+    private jwtService: JwtService,
+    private redisService: RedisService
+  ) {
     this.prisma = new PrismaClient();
   }
 
@@ -93,11 +99,12 @@ export class AuthService {
       roles,
     );
 
-    // 保存刷新令牌
-    await this.saveRefreshToken(user.id, refreshToken);
+    // 保存刷新令牌到Redis
+    await this.saveRefreshTokenToRedis(user.id, refreshToken);
 
     // 移除敏感信息
-    const { password, ...userInfo } = user;
+    const { id, username, status, userrole, ...otherInfo } = user;
+    const userInfo = { id, username, status, userrole, ...otherInfo };
 
     return {
       user: userInfo,
@@ -340,41 +347,18 @@ export class AuthService {
   }
 
   /**
-   * 保存刷新令牌
+   * 保存刷新令牌到Redis
    * @param userId 用户ID
    * @param refreshToken 刷新令牌
    */
-  private async saveRefreshToken(userId: number, refreshToken: string) {
-    // 检查用户是否已有刷新令牌
-    const existingToken = await this.prisma.refreshtoken.findUnique({
-      where: { userId },
-    });
-
-    // 设置过期时间为7天
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-
-    if (existingToken) {
-      // 更新现有刷新令牌
-      await this.prisma.refreshtoken.update({
-        where: { id: existingToken.id },
-        data: {
-          token: refreshToken,
-          expiresAt,
-          updatedAt: new Date(),
-        },
-      });
-    } else {
-      // 创建新的刷新令牌
-      await this.prisma.refreshtoken.create({
-        data: {
-          userId,
-          token: refreshToken,
-          expiresAt,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-      });
-    }
+  private async saveRefreshTokenToRedis(userId: number, refreshToken: string) {
+    const key = `${this.TOKEN_PREFIX}${userId}`;
+    
+    // 保存用户ID和刷新令牌的映射
+    await this.redisService.set(key, refreshToken, this.TOKEN_EXPIRY);
+    
+    // 保存刷新令牌和用户ID的反向映射，用于查询
+    await this.redisService.set(refreshToken, userId.toString(), this.TOKEN_EXPIRY);
   }
 
   /**
@@ -382,10 +366,16 @@ export class AuthService {
    * @param userId 用户ID
    */
   async logout(userId: number) {
-    // 删除刷新令牌
-    await this.prisma.refreshtoken.deleteMany({
-      where: { userId },
-    });
+    // 从Redis中删除刷新令牌
+    const key = `${this.TOKEN_PREFIX}${userId}`;
+    const token = await this.redisService.get(key);
+    
+    if (token) {
+      // 删除反向映射
+      await this.redisService.del(token);
+      // 删除用户令牌
+      await this.redisService.del(key);
+    }
 
     return { success: true };
   }
@@ -396,20 +386,30 @@ export class AuthService {
    * @returns 新的访问令牌和刷新令牌
    */
   async refreshToken(refreshToken: string) {
-    // 查找刷新令牌
-    const tokenRecord = await this.prisma.refreshtoken.findFirst({
-      where: {
-        token: refreshToken,
-        expiresAt: { gt: new Date() } // 未过期
-      },
-      include: { user: true }
-    });
-
-    if (!tokenRecord) {
+    // 从Redis中查找令牌对应的用户ID
+    const userIdStr = await this.redisService.get(refreshToken);
+    
+    if (!userIdStr) {
       throw new UnauthorizedException('刷新令牌无效或已过期');
     }
+    
+    const userId = parseInt(userIdStr, 10);
+    
+    // 查找用户信息
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        userrole: {
+          include: {
+            role: true
+          }
+        }
+      }
+    });
 
-    const user = tokenRecord.user;
+    if (!user) {
+      throw new UnauthorizedException('用户不存在');
+    }
 
     // 检查用户状态
     if (user.status !== 'ACTIVE') {
@@ -417,26 +417,18 @@ export class AuthService {
     }
 
     // 获取用户角色
-    const userRoles = await this.prisma.userrole.findMany({
-      where: { userId: user.id },
-      include: { role: true }
-    });
-
-    const roles = userRoles.map(ur => ur.role.name);
+    const roles = user.userrole.map(ur => ur.role.name);
 
     // 生成新的令牌
     const { accessToken, refreshToken: newRefreshToken } =
       await this.generateTokens(user.id, user.username, roles);
 
-    // 更新刷新令牌
-    await this.prisma.refreshtoken.update({
-      where: { id: tokenRecord.id },
-      data: {
-        token: newRefreshToken,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        updatedAt: new Date()
-      }
-    });
+    // 删除旧的刷新令牌
+    await this.redisService.del(refreshToken);
+    await this.redisService.del(`${this.TOKEN_PREFIX}${userId}`);
+    
+    // 保存新的刷新令牌
+    await this.saveRefreshTokenToRedis(userId, newRefreshToken);
 
     return {
       accessToken,
@@ -514,5 +506,56 @@ export class AuthService {
 
     // 处理登录
     return this.handleSuccessfulLogin(user);
+  }
+
+  /**
+   * 查找Redis中的Token
+   * @param userId 可选的用户ID，如果提供则查询特定用户的token
+   * @returns 查询到的token信息
+   */
+  async findTokensInRedis(userId?: number) {
+    try {
+      // 如果提供了用户ID，只查询该用户的token
+      if (userId) {
+        const key = `${this.TOKEN_PREFIX}${userId}`;
+        const token = await this.redisService.get(key);
+        
+        if (token) {
+          return {
+            userId,
+            tokens: [{ key, value: token }]
+          };
+        }
+        
+        return { userId, tokens: [] };
+      }
+      
+      // 查询所有刷新token
+      const allKeys = await this.redisService.keys(`${this.TOKEN_PREFIX}*`);
+      const result = [];
+      
+      for (const key of allKeys) {
+        const value = await this.redisService.get(key);
+        if (value) {
+          // 从key中提取userId (token:refresh:{userId})
+          const keyParts = key.split(':');
+          const userId = parseInt(keyParts[keyParts.length - 1], 10);
+          
+          result.push({
+            userId,
+            key,
+            value
+          });
+        }
+      }
+      
+      return { 
+        total: result.length,
+        tokens: result 
+      };
+    } catch (error) {
+      console.error('查询Redis Token失败:', error);
+      throw new Error('查询Redis Token失败');
+    }
   }
 }

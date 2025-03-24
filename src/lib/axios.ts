@@ -8,7 +8,7 @@ import { AUTH_MESSAGES } from '@/constants/messages';
  * 配置了拦截器和默认设置
  */
 const httpClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000',
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -24,17 +24,27 @@ httpClient.interceptors.request.use(
         config.headers.Authorization = `Bearer ${token}`;
       }
     }
+    console.log('发送请求:', config.url, config.method, config.data);
     return config;
   },
   (error: unknown) => {
+    console.error('请求错误:', error);
     return Promise.reject(error);
   }
 );
 
 // 响应拦截器 - 处理错误和刷新令牌
 httpClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log('响应成功:', response.status, response.data);
+    return response;
+  },
   async (error: AxiosError<ApiError>) => {
+    console.error('响应错误:', error.message, error.response?.status);
+    if (error.response) {
+      console.error('错误详情:', error.response.data);
+    }
+
     // 获取原始请求配置
     const originalRequest = error.config as RequestWithRetry;
 
@@ -50,7 +60,7 @@ httpClient.interceptors.response.use(
 
         // 获取刷新令牌
         const refreshToken = localStorage.getItem('refreshToken');
-        const response = await axios.post('/api/auth/refresh', { refreshToken });
+        const response = await axios.post(`${httpClient.defaults.baseURL}/auth/refresh`, { refreshToken });
 
         // 更新令牌
         const { accessToken, refreshToken: newRefreshToken } = response.data;

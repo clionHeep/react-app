@@ -3,7 +3,7 @@ import { InternalAxiosRequestConfig } from 'axios';
 // 用户相关接口
 export interface User {
   id: number;
-  email: string;
+  username: string;
   name: string;
   roles: string;
   [key: string]: unknown;
@@ -18,7 +18,7 @@ export interface LoginResponse {
 
 // 注册请求
 export interface RegisterRequest {
-  email: string;
+  username: string;
   password: string;
   name?: string;
 }

@@ -416,3 +416,7 @@ body {
   visibility: visible !important;
   opacity: 1 !important;
 }
+
+.ant-menu-item .ant-menu-item-danger {
+  color: var(--theme-danger) !important;
+}

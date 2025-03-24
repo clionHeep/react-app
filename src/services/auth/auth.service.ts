@@ -3,7 +3,7 @@ import httpClient from '@/lib/axios';
 // 类型定义
 export interface User {
   id: number;
-  email: string;
+  username: string;
   name: string;
   roles: string;
   [key: string]: unknown; // 替代any的更安全类型
@@ -18,9 +18,9 @@ export interface LoginResponse {
 // 认证相关API
 export const AuthService = {
   // 登录API
-  login: async (email: string, password: string): Promise<LoginResponse> => {
+  login: async (username: string, password: string): Promise<LoginResponse> => {
     try {
-      const response = await httpClient.post('/api/auth/login', { email, password });
+      const response = await httpClient.post('/api/auth/login', { username, password });
       return response.data;
     } catch (error) {
       console.error('登录失败:', error);
@@ -30,7 +30,7 @@ export const AuthService = {
 
   // 注册API
   register: async (userData: {
-    email: string;
+    username: string;
     password: string;
     name?: string;
   }): Promise<LoginResponse> => {
