@@ -1,5 +1,3 @@
-'use client';
-
 export default function AboutPage() {
   return (
     <div style={{ padding: 24, borderRadius: 8 }}>

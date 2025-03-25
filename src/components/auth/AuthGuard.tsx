@@ -2,13 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-
-// 模拟用户权限数据
-const userPermissions = {
-  isAuthenticated: true, // 是否已登录
-  roles: ['user'], // 用户角色
-  permissions: ['basic:read', 'dashboard:read'] // 具体权限
-};
+import { useAuth } from '@/context/AuthContext';
 
 // 路由权限配置
 const routePermissions: Record<string, { 
@@ -28,20 +22,27 @@ const routePermissions: Record<string, {
   // 其他页面可以根据需要添加权限配置
 };
 
+// 公开页面列表
+const PUBLIC_ROUTES = ['/', '/about', '/login', '/register'];
+
 interface AuthGuardProps {
   children: React.ReactNode;
 }
 
 const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
   const router = useRouter();
-  const pathname = usePathname();
+  const pathname = usePathname() || '';
   const [authorized, setAuthorized] = useState(false);
+  const { isAuthenticated, isLoading, user } = useAuth();
 
   useEffect(() => {
+    // 如果正在加载认证状态，暂时不执行检查
+    if (isLoading) return;
+
     // 检查当前路由是否需要权限验证
     const checkAuth = () => {
-      // 首页、注册页、登录页等公开页面
-      if (pathname === '/' || pathname === '/about' || pathname === '/login') {
+      // 公开页面，直接通过
+      if (PUBLIC_ROUTES.includes(pathname)) {
         setAuthorized(true);
         return;
       }
@@ -58,33 +59,35 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
           // 检查是否需要登录
           if (config.requireAuth) {
             requiresAuth = true;
-            if (!userPermissions.isAuthenticated) {
+            if (!isAuthenticated) {
               hasPermission = false;
               return;
             }
           }
           
           // 检查角色
-          if (config.roles && config.roles.length > 0) {
-            if (!userPermissions.roles.some(role => config.roles?.includes(role))) {
+          if (config.roles && config.roles.length > 0 && user) {
+            const userRoles = user.roles?.split(',') || [];
+            if (!userRoles.some(role => config.roles?.includes(role))) {
               hasPermission = false;
               return;
             }
           }
           
-          // 检查具体权限
-          if (config.permissions && config.permissions.length > 0) {
-            if (!userPermissions.permissions.some(perm => config.permissions?.includes(perm))) {
-              hasPermission = false;
-              return;
-            }
-          }
+          // 检查具体权限（这需要接口支持，暂时禁用）
+          // if (config.permissions && config.permissions.length > 0) {
+          //   const userPermissions = []; // 从用户对象获取权限
+          //   if (!userPermissions.some(perm => config.permissions?.includes(perm))) {
+          //     hasPermission = false;
+          //     return;
+          //   }
+          // }
         }
       });
       
       if (requiresAuth && !hasPermission) {
-        // 可以跳转到登录页或者没有权限页面
-        router.push('/login');
+        // 跳转到登录页，并带上需要返回的URL
+        router.push(`/login?from=${encodeURIComponent(pathname)}`);
         setAuthorized(false);
       } else {
         setAuthorized(true);
@@ -92,7 +95,19 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
     };
     
     checkAuth();
-  }, [pathname, router]);
+  }, [pathname, router, isAuthenticated, isLoading, user]);
+  
+  // 如果正在加载，显示加载状态
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="spinner"></div>
+          <p className="mt-2">正在加载...</p>
+        </div>
+      </div>
+    );
+  }
   
   return authorized ? <>{children}</> : null;
 };

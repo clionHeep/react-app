@@ -1,7 +1,7 @@
 import { db } from '@/db';
 import * as bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { createSuccessResponse, createErrorResponse, createServerErrorResponse, ApiStatus } from '@/utils/api-response';
+import { JsonResponse, createErrorResponse, createServerErrorResponse, ApiStatus } from '@/utils/api-response';
 
 // 添加 Prisma 错误类型
 interface PrismaError extends Error {
@@ -103,7 +103,7 @@ export async function POST(request: Request) {
       refreshToken
     };
 
-    return createSuccessResponse(responseData, '注册成功', ApiStatus.CREATED);
+    return JsonResponse(responseData, '注册成功', ApiStatus.CREATED);
   } catch (error: unknown) {
     // 添加详细错误日志
     const err = error as Error;

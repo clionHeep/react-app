@@ -22,6 +22,7 @@
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.0.12",
     "@prisma/client": "^6.5.0",
+    "@reduxjs/toolkit": "^2.6.1",
     "antd": "^5.24.4",
     "axios": "^1.8.4",
     "bcrypt": "^5.1.1",
@@ -37,7 +38,9 @@
     "prisma": "^6.5.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-redux": "^9.2.0",
     "redis": "^4.7.0",
+    "redux-persist": "^6.0.0",
     "reflect-metadata": "^0.2.2"
   },
   "devDependencies": {

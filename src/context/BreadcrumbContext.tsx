@@ -41,6 +41,9 @@ const pathTitleMap: Record<string, string> = {
   "/tools": "开发工具",
 };
 
+// 需要排除的路径（不在面包屑中显示）
+const EXCLUDED_PATHS = ['/login', '/register', '/auth/login', '/auth/register'];
+
 // 创建上下文
 const BreadcrumbContext = createContext<BreadcrumbContextType | undefined>(
   undefined
@@ -61,7 +64,7 @@ export const BreadcrumbProvider: React.FC<{ children: ReactNode }> = ({
   const [currentPath, setCurrentActivePath] = useState<string>("/");
 
   // 添加面包屑
-  const addBreadcrumb = (item: BreadcrumbItem) => {
+  const addBreadcrumb = useCallback((item: BreadcrumbItem) => {
     // 检查是否已经存在相同路径的面包屑
     setBreadcrumbs((prev) => {
       const exists = prev.some((crumb) => crumb.path === item.path);
@@ -71,7 +74,7 @@ export const BreadcrumbProvider: React.FC<{ children: ReactNode }> = ({
       }
       return [...prev, item];
     });
-  };
+  }, []);
 
   // 移除面包屑
   const removeBreadcrumb = (key: string) => {
@@ -112,6 +115,12 @@ export const BreadcrumbProvider: React.FC<{ children: ReactNode }> = ({
     // 更新当前活动路径
     setCurrentActivePath(path);
     
+    // 如果是登录或注册页面，不添加到面包屑
+    if (EXCLUDED_PATHS.includes(path)) {
+      console.log('排除登录/注册路径不添加到面包屑:', path);
+      return;
+    }
+    
     const title = pathTitleMap[path] || path.split('/').pop() || path;
     const key = path.replace(/\//g, '-').slice(1) || 'home';
     
@@ -120,8 +129,8 @@ export const BreadcrumbProvider: React.FC<{ children: ReactNode }> = ({
     
     // 检查是否是最近刚刚删除的项（最近5秒内）
     const isRecentlyRemoved = recentlyRemoved && 
-                             recentlyRemoved.key === key && 
-                             (Date.now() - recentlyRemoved.timestamp < 5000);
+                              recentlyRemoved.key === key && 
+                              (Date.now() - recentlyRemoved.timestamp < 5000);
     
     // 如果不存在且不是主页，且不是最近删除的，则添加
     if (!exists && path !== '/' && !isRecentlyRemoved) {

@@ -5,9 +5,10 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Form, Input, Button, Alert, Typography, Card, message } from "antd";
 import { UserOutlined, LockOutlined } from "@ant-design/icons";
-import { loginApi, registerApi } from "@/services/auth/authService";
+import { registerApi } from "@/services/auth/authService";
 import { showMessage } from "@/utils/message";
 import { AUTH_MESSAGES } from "@/constants/messages";
+import { useAuth } from "@/context/AuthContext";
 
 const { Title } = Typography;
 
@@ -21,18 +22,23 @@ export default function AuthForm({ type }: AuthFormProps) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [messageApi, contextHolder] = message.useMessage(); // 使用 Hook 方式
+  const { login } = useAuth(); // 导入AuthContext中的login方法
 
   const handleLogin = async (values: { username: string; password: string }) => {
     setError("");
     setLoading(true);
 
     try {
-      const response = await loginApi(values.username, values.password);
-      localStorage.setItem("accessToken", response.accessToken);
-      localStorage.setItem("user", JSON.stringify(response.user));
-
-      showMessage.success(AUTH_MESSAGES.LOGIN_SUCCESS);
-      router.push("/dashboard");
+      // 使用AuthContext中的login方法
+      const success = await login(values.username, values.password);
+      
+      if (success) {
+        showMessage.success(AUTH_MESSAGES.LOGIN_SUCCESS);
+        router.push("/");
+      } else {
+        showMessage.error(AUTH_MESSAGES.LOGIN_FAILED);
+        setError("用户名或密码错误");
+      }
     } catch (error: unknown) {
       console.error("登录失败:", error);
       showMessage.error(AUTH_MESSAGES.LOGIN_FAILED);
