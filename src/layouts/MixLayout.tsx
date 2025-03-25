@@ -489,7 +489,7 @@ const MixLayout: React.FC<LayoutProps> = ({
         activeSubMenu !== null;
 
       // 返回包含关键信息的菜单项
-      return {
+        return {
         key: typedItem.key,
         icon: typedItem.icon,
         label: typedItem.label,
@@ -593,24 +593,24 @@ const MixLayout: React.FC<LayoutProps> = ({
         }}
       >
         {hasSubMenu && (
-          <Sider
-            trigger={null}
-            collapsible
-            collapsed={collapsed}
-            style={{
+      <Sider
+        trigger={null}
+        collapsible
+        collapsed={collapsed}
+        style={{
               overflow: "hidden",
-              height: "100vh",
-              position: "fixed",
-              left: 0,
-              top: 0,
-              bottom: 0,
-              background: token.colorBgContainer,
-              fontSize: 14,
+          height: "100vh",
+          position: "fixed",
+          left: 0,
+          top: 0,
+          bottom: 0,
+          background: token.colorBgContainer,
+          fontSize: 14,
               msOverflowStyle: "none" /* IE and Edge */,
               scrollbarWidth: "none" /* Firefox */,
-            }}
-            width={200}
-          >
+        }}
+        width={200}
+      >
             <style>
               {`
               ${getMenuStyles(token)}
@@ -619,31 +619,31 @@ const MixLayout: React.FC<LayoutProps> = ({
             </style>
             <div
               className="sider-logo"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                padding: collapsed ? "16px 8px" : "16px",
+          style={{
+            display: "flex",
+            alignItems: "center",
+            padding: collapsed ? "16px 8px" : "16px",
                 justifyContent: "center",
                 height: 64,
-              }}
-            >
-              <Logo collapsed={collapsed} />
-            </div>
+          }}
+        >
+          <Logo collapsed={collapsed} />
+        </div>
             <div className="menu-container">
-              <Menu
-                mode="inline"
+        <Menu
+          mode="inline"
                 items={getSubdefaultMenuItems()}
                 selectedKeys={activeSubMenu ? [activeSubMenu] : []}
                 onClick={handleSubMenuClick_internal}
-                style={{
-                  borderRight: "none",
-                  background: "transparent",
-                }}
-                className="fixed-menu-items"
+          style={{
+            borderRight: "none",
+            background: "transparent",
+          }}
+          className="fixed-menu-items"
                 theme="light"
-              />
+        />
             </div>
-          </Sider>
+      </Sider>
         )}
 
         <div
@@ -655,10 +655,10 @@ const MixLayout: React.FC<LayoutProps> = ({
         >
           <BreadcrumbHandler />
         </div>
-
+        
         <Layout
           style={{
-            padding: "0 24px 24px",
+          padding: "0 24px 24px", 
             marginTop: 20,
           }}
         >
