@@ -1,5 +1,5 @@
 /** @type {import('tailwindcss').Config} */
-module.exports = {
+const config = {
   content: [
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
@@ -12,4 +12,6 @@ module.exports = {
   corePlugins: {
     preflight: false, // 禁用默认样式，避免与 antd 冲突
   },
-}; 
+};
+
+export default config; 
