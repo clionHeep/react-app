@@ -1,7 +1,7 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { ApiError, RequestWithRetry } from '@/types/api';
 import { showMessage } from '@/utils/message';
-import { AUTH_MESSAGES } from '@/constants/messages';
+import { AUTH_MESSAGES } from '@/lib/messages';
 
 /**
  * Axios HTTP客户端实例
