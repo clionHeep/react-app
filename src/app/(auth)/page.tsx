@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Form, Input, Button, Alert, Typography, Card, message } from "antd";
 import { UserOutlined, LockOutlined } from "@ant-design/icons";
-import { registerApi } from "@/services/auth/authService";
+import { registerApi } from "@/lib/services/auth/authService";
 import { showMessage } from "@/utils/message";
-import { AUTH_MESSAGES } from "@/lib/messages";
+import { AUTH_MESSAGES } from "@/providers/message/messages";
 import { useAuth } from "@/context/AuthContext";
 
 const { Title } = Typography;

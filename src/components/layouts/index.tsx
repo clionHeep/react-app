@@ -2,10 +2,10 @@
 
 import React, { useState } from "react";
 import { Layout } from "antd";
-import TopLayout from "../../layouts/TopLayout";
-import SideLayout from "../../layouts/SideLayout";
-import MixLayout from "../../layouts/MixLayout";
-import CustomLayout from "../../layouts/CustomLayout";
+import TopLayout from "./TopLayout";
+import SideLayout from "./SideLayout";
+import MixLayout from "./MixLayout";
+import CustomLayout from "./CustomLayout";
 import LayoutPreview from "./preview/LayoutPreview";
 import { BreadcrumbProvider } from "@/context/BreadcrumbContext";
 import { LayoutType } from "@/types";

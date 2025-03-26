@@ -5,7 +5,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
-import { RedisModule } from '../redis/redis.module';
+import { RedisModule } from '../lib/services/redis/redis.module';
 
 @Module({
   imports: [

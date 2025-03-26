@@ -5,7 +5,7 @@ import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { RegisterDto } from './dto/register.dto';
-import { RedisService } from '../redis/redis.service';
+import { RedisService } from '../lib/services/redis/redis.service';
 
 interface UserRole {
   role: {

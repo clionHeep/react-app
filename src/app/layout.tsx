@@ -13,7 +13,7 @@ import MainLayout from "@/components/layouts/MainLayout";
 import { BreadcrumbProvider } from "@/context/BreadcrumbContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { MessageProvider } from '@/providers/MessageProvider';
-import ReduxProvider from "@/redux/ReduxProvider";
+import ReduxProvider from "@/hooks/redux/ReduxProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 

@@ -2,12 +2,12 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAppDispatch, useAppSelector } from "@/redux/hooks";
+import { useAppDispatch, useAppSelector } from "@/hooks/redux/hooks";
 import {
   setCredentials,
   logout as logoutAction,
   User,
-} from "@/redux/authSlice";
+} from "@/hooks/redux/authSlice";
 
 interface AuthContextType {
   user: User | null;

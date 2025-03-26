@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { RegisterDto } from '../auth/dto/register.dto';
+import { RegisterDto } from '../../../auth/dto/register.dto';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -28,7 +28,7 @@ export class UserService {
 
   async create(data: RegisterDto) {
     // 检查邮箱是否已存在
-    const existingUser = await this.findByEmail(data.email);
+    const existingUser = await this.findByEmail(data.email || '');
     if (existingUser) {
       throw new BadRequestException('邮箱已被注册');
     }
@@ -39,6 +39,7 @@ export class UserService {
     // 创建用户
     const user = await this.prisma.user.create({
       data: {
+        username: data.username,
         email: data.email,
         password: hashedPassword,
         name: data.name,

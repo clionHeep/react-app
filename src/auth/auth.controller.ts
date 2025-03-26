@@ -7,7 +7,7 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import type { Request } from 'express';
 import type { UserInfo } from '../types/types';
-import { Roles } from '../decorators/roles.decorator';
+import { Roles } from '../lib/services/decorators/roles.decorator';
 import { RolesGuard } from '../guards/roles.guard';
 
 @Controller('auth')

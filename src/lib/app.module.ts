@@ -1,11 +1,11 @@
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { PrismaModule } from './prisma/prisma.module';
-import { AuthModule } from './auth/auth.module';
-import { UserModule } from './user/user.module';
-import { RedisModule } from './redis/redis.module';
-import { StatsModule } from './stats/stats.module';
-import { StatsMiddleware } from './stats/stats.middleware';
+import { PrismaModule } from './services/prisma/prisma.module';
+import { AuthModule } from '../auth/auth.module';
+import { UserModule } from './services/user/user.module';
+import { RedisModule } from './services/redis/redis.module';
+import { StatsModule } from './services/stats/stats.module';
+import { StatsMiddleware } from './services/stats/stats.middleware';
 
 @Module({
   imports: [

@@ -1,9 +1,9 @@
 import React, { useState, useEffect, Dispatch, SetStateAction } from "react";
 import type { LayoutType } from "@/types";
-import TopLayout from "@/layouts/TopLayout";
-import SideLayout from "@/layouts/SideLayout";
-import MixLayout from "@/layouts/MixLayout";
-import CustomLayout from "@/layouts/CustomLayout";
+import TopLayout from "@/components/layouts/TopLayout";
+import SideLayout from "@/components/layouts/SideLayout";
+import MixLayout from "@/components/layouts/MixLayout";
+import CustomLayout from "@/components/layouts/CustomLayout";
 import LayoutPreview from "./preview/LayoutPreview";
 import { ConfigProvider, theme as antdTheme } from "antd";
 
