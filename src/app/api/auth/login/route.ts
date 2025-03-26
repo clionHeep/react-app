@@ -2,9 +2,8 @@ import { db } from '@/db';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import { createClient } from 'redis';
-import { menu, permission } from '@prisma/client';
-import { UserRole, RoleMenu, RolePermission } from '@/types/db';
 import { JsonResponse, createErrorResponse, createServerErrorResponse, ApiStatus } from '@/utils/api-response';
+import { UserRole } from '@/types/db';
 
 // Redis客户端
 let redisClient: ReturnType<typeof createClient> | null = null;
@@ -75,51 +74,6 @@ export async function POST(request: Request) {
       include: { role: true }
     }) as unknown as UserRole[];
 
-    // 获取用户角色ID列表
-    const roleIds = userRoles.map((ur: UserRole) => ur.roleId);
-
-    // 查询用户菜单
-    const userMenus = await db.rolemenu.findMany({
-      where: {
-        roleId: {
-          in: roleIds
-        }
-      },
-      include: {
-        menu: true
-      }
-    }) as unknown as RoleMenu[];
-
-    // 处理菜单数据并去重
-    const menuMap = new Map<number, menu>();
-    userMenus.forEach((rm: RoleMenu) => {
-      if (rm.menu && !menuMap.has(rm.menu.id)) {
-        menuMap.set(rm.menu.id, rm.menu);
-      }
-    });
-    const menus = Array.from(menuMap.values());
-
-    // 查询用户权限
-    const userPermissions = await db.rolepermission.findMany({
-      where: {
-        roleId: {
-          in: roleIds
-        }
-      },
-      include: {
-        permission: true
-      }
-    }) as unknown as RolePermission[];
-
-    // 处理权限数据并去重
-    const permissionMap = new Map<number, permission>();
-    userPermissions.forEach((rp: RolePermission) => {
-      if (rp.permission && !permissionMap.has(rp.permission.id)) {
-        permissionMap.set(rp.permission.id, rp.permission);
-      }
-    });
-    const permissions = Array.from(permissionMap.values());
-
     // 生成JWT令牌
     const accessToken = jwt.sign(
       { sub: user.id, username: user.username },
@@ -161,23 +115,18 @@ export async function POST(request: Request) {
     }
 
     // 准备用户角色数据
-    const roles = userRoles.map((ur: UserRole) => ur.role);
+    const roles = userRoles.map((ur: UserRole) => ur.role.name);
 
-    // 返回完整的用户信息，包括角色、菜单和权限，使用统一的响应结构
+    // 返回简化的用户信息和令牌
     const responseData = {
       user: {
         id: user.id,
         username: user.username,
         name: user.name,
         email: user.email,
-        phone: user.phone,
-        status: user.status,
         avatar: user.avatar,
-        roles: user.roles || 'user' // 用户表中的角色字符串
+        roles: roles.join(',') || 'user'
       },
-      roles, // 用户关联的角色对象
-      menus, // 用户有权限访问的菜单
-      permissions, // 用户拥有的权限
       accessToken,
       refreshToken
     };

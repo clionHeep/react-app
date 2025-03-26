@@ -4,26 +4,10 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 
-// 路由权限配置
-const routePermissions: Record<string, { 
-  roles?: string[],
-  permissions?: string[], 
-  requireAuth?: boolean 
-}> = {
-  '/dashboard': { requireAuth: true },
-  '/dashboard/analytics': { requireAuth: true, permissions: ['dashboard:read'] },
-  '/dashboard/workspace': { requireAuth: true },
-  '/users': { requireAuth: true, roles: ['admin'] },
-  '/settings': { requireAuth: true, roles: ['admin'] },
-  '/system': { requireAuth: true, roles: ['admin'] },
-  '/dev-tools': { requireAuth: true, roles: ['developer', 'admin'] },
-  '/content': { requireAuth: true },
-  '/e-commerce': { requireAuth: true },
-  // 其他页面可以根据需要添加权限配置
-};
-
 // 公开页面列表
 const PUBLIC_ROUTES = ['/login', '/register', '/auth/login', '/auth/register', '/(auth)/login', '/(auth)/register'];
+// 错误页面列表
+const ERROR_ROUTES = ['/unauthorized', '/not-found', '/error'];
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -34,63 +18,72 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
   const pathname = usePathname() || '';
   const [authorized, setAuthorized] = useState(false);
   const { isAuthenticated, isLoading, user } = useAuth();
-
+  
   useEffect(() => {
     // 如果正在加载认证状态，暂时不执行检查
     if (isLoading) return;
 
+    // 如果当前路径是错误页面，直接显示
+    if (ERROR_ROUTES.includes(pathname)) {
+      setAuthorized(true);
+      return;
+    }
+
     // 检查当前路由是否需要权限验证
-    const checkAuth = () => {
+    const checkAuth = async () => {
       // 公开页面，直接通过
       if (PUBLIC_ROUTES.includes(pathname)) {
         setAuthorized(true);
         return;
       }
       
-      // 检查当前路径是否有权限配置
-      let requiresAuth = false;
-      let hasPermission = true;
-      
-      // 查找最匹配的路由配置
-      Object.keys(routePermissions).forEach(route => {
-        if (pathname.startsWith(route)) {
-          const config = routePermissions[route];
-          
-          // 检查是否需要登录
-          if (config.requireAuth) {
-            requiresAuth = true;
-            if (!isAuthenticated) {
-              hasPermission = false;
-              return;
-            }
-          }
-          
-          // 检查角色
-          if (config.roles && config.roles.length > 0 && user) {
-            const userRoles = user.roles?.split(',') || [];
-            if (!userRoles.some(role => config.roles?.includes(role))) {
-              hasPermission = false;
-              return;
-            }
-          }
-          
-          // 检查具体权限（这需要接口支持，暂时禁用）
-          // if (config.permissions && config.permissions.length > 0) {
-          //   const userPermissions = []; // 从用户对象获取权限
-          //   if (!userPermissions.some(perm => config.permissions?.includes(perm))) {
-          //     hasPermission = false;
-          //     return;
-          //   }
-          // }
-        }
-      });
-      
-      if (requiresAuth && !hasPermission) {
-        // 跳转到登录页，并带上需要返回的URL
+      // 如果用户未登录，则需要认证
+      if (!isAuthenticated) {
+        console.log('用户未登录，重定向到登录页面');
         router.push(`/login?from=${encodeURIComponent(pathname)}`);
         setAuthorized(false);
-      } else {
-        setAuthorized(true);
+        return;
+      }
+      
+      try {
+        console.log(`正在检查用户对路径 ${pathname} 的访问权限`);
+        
+        // 如果已登录，检查后端是否允许访问当前路由
+        const response = await fetch('/api/auth/check-permission', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            path: pathname,
+          }),
+        });
+        
+        if (!response.ok) {
+          throw new Error(`权限检查API返回非200状态码: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('权限检查响应:', data);
+        
+        if (data.status === 200 && data.data?.hasPermission) {
+          console.log('用户有权限访问此页面');
+          setAuthorized(true);
+        } else if (data.status === 401) {
+          console.error('用户未认证:', data.msg);
+          router.push(`/login?from=${encodeURIComponent(pathname)}`);
+          setAuthorized(false);
+        } else {
+          console.error('权限不足:', data.msg || '您没有访问此页面的权限');
+          // 重定向到403页面
+          router.push('/unauthorized');
+          setAuthorized(false);
+        }
+      } catch (error) {
+        console.error('权限检查失败:', error);
+        // 服务器错误，重定向到500页面
+        router.push('/error');
+        setAuthorized(false);
       }
     };
     

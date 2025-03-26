@@ -8,20 +8,24 @@ datasource db {
 }
 
 model menu {
-  id         Int        @id @default(autoincrement())
-  name       String
-  path       String?
-  component  String?
-  redirect   String?
-  icon       String?
-  sort       Int        @default(0)
-  hidden     Boolean    @default(false)
-  parentId   Int?
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime
-  menu       menu?      @relation("menuTomenu", fields: [parentId], references: [id], map: "Menu_parentId_fkey")
-  other_menu menu[]     @relation("menuTomenu")
-  rolemenu   rolemenu[]
+  id          Int          @id @default(autoincrement())
+  name        String
+  path        String?
+  component   String?
+  redirect    String?
+  icon        String?
+  sort        Int          @default(0)
+  hidden      Boolean      @default(false)
+  parentId    Int?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime
+  
+  // 关系
+  parent      menu?        @relation("menuTomenu", fields: [parentId], references: [id], map: "Menu_parentId_fkey")
+  children    menu[]       @relation("menuTomenu")
+  rolemenu    rolemenu[]   // 通过中间表与角色关联
+  permissions permission[] @relation("MenuToPermission") // 多对多关系：菜单-权限
+  roles       role[]       @relation("RoleToMenu") // 多对多关系：菜单-角色
 
   @@index([parentId], map: "Menu_parentId_fkey")
 }
@@ -33,7 +37,11 @@ model permission {
   description    String?
   createdAt      DateTime         @default(now())
   updatedAt      DateTime
-  rolepermission rolepermission[]
+  
+  // 关系
+  rolepermission rolepermission[] // 通过中间表与角色关联
+  roles          role[]           @relation("RoleToPermission") // 多对多关系：权限-角色
+  menus          menu[]           @relation("MenuToPermission") // 多对多关系：权限-菜单
 }
 
 model post {
@@ -65,9 +73,14 @@ model role {
   description    String?
   createdAt      DateTime         @default(now())
   updatedAt      DateTime
-  rolemenu       rolemenu[]
-  rolepermission rolepermission[]
-  userrole       userrole[]
+  
+  // 关系
+  rolemenu       rolemenu[]       // 通过中间表与菜单关联
+  rolepermission rolepermission[] // 通过中间表与权限关联
+  userrole       userrole[]       // 通过中间表与用户关联
+  permissions    permission[]     @relation("RoleToPermission") // 多对多关系：角色-权限
+  menus          menu[]           @relation("RoleToMenu") // 多对多关系：角色-菜单
+  users          user[]           @relation("UserToRole") // 多对多关系：角色-用户
 }
 
 model rolemenu {
@@ -109,12 +122,15 @@ model user {
   lastLoginAt  DateTime?
   lastLoginIp  String?
   status       user_status   @default(ACTIVE)
-  roles        String        @default("user")
+  roles        String        @default("user") // 存储角色字符串（已有字段）
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
+  
+  // 关系
   post         post[]
   refreshtoken refreshtoken?
-  userrole     userrole[]
+  userrole     userrole[]    // 通过中间表与角色关联
+  rolesDirect  role[]        @relation("UserToRole") // 多对多关系：用户-角色
 }
 
 model userrole {

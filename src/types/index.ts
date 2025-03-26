@@ -1,3 +1,5 @@
+import { ReactNode } from 'react';
+
 // 布局类型
 export type LayoutType = "top" | "side" | "mix" | "custom";
 
@@ -15,8 +17,8 @@ export interface LayoutPreviewProps {
 
 // 布局组件属性类型
 export interface LayoutProps {
-  children: React.ReactNode;
-  collapsed: boolean;
-  setCollapsed: (collapsed: boolean) => void;
-  onLayoutPreviewOpen: () => void;
+  children: ReactNode;
+  collapsed?: boolean;
+  setCollapsed?: (collapsed: boolean) => void;
+  onLayoutPreviewOpen?: () => void;
 } 

@@ -1,5 +1,29 @@
 import { InternalAxiosRequestConfig } from 'axios';
 
+// 菜单、权限和角色类型定义
+export interface Menu {
+  id: number;
+  name: string;
+  path: string;
+  icon?: string;
+  parentId?: number;
+  sort?: number;
+  hidden?: boolean;
+}
+
+export interface Permission {
+  id: number;
+  code: string;
+  name: string;
+  description?: string;
+}
+
+export interface Role {
+  id: number;
+  name: string;
+  description?: string;
+}
+
 // 用户相关接口
 export interface User {
   id: number;
@@ -42,4 +66,38 @@ export interface ApiResponse<T = unknown> {
   message: string;
   data?: T;
   error?: string;
+}
+
+// 用户详细信息响应类型
+export interface UserInfoResponse {
+  user: {
+    id: number;
+    username: string;
+    name?: string;
+    email?: string;
+    phone?: string;
+    status: string;
+    avatar?: string;
+    roles: string;
+  };
+  roles: Array<{
+    id: number;
+    name: string;
+    description?: string;
+  }>;
+  menus: Array<{
+    id: number;
+    name: string;
+    path: string;
+    icon?: string;
+    parentId?: number;
+    sort?: number;
+    hidden?: boolean;
+  }>;
+  permissions: Array<{
+    id: number;
+    code: string;
+    name: string;
+    description?: string;
+  }>;
 } 

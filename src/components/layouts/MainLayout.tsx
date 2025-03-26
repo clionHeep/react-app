@@ -1,6 +1,8 @@
+"use client";
+
 import React, { useState, useEffect, Dispatch, SetStateAction } from "react";
-import type { LayoutType } from "@/types";
-import TopLayout from "@/components/layouts/TopLayout";
+import type { LayoutType, LayoutProps } from "@/types";
+import TopLayout from "./TopLayout";
 import SideLayout from "@/components/layouts/SideLayout";
 import MixLayout from "@/components/layouts/MixLayout";
 import CustomLayout from "@/components/layouts/CustomLayout";
@@ -265,7 +267,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
   }, []);
 
   const renderLayout = () => {
-    const props = {
+    const props: LayoutProps = {
       children,
       collapsed,
       setCollapsed: handleCollapsedChange,
