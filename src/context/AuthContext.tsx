@@ -86,6 +86,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return true;
       }
       
+      // 获取cookie中的token
+      const cookies = document.cookie.split(';');
+      const tokenCookie = cookies.find(cookie => cookie.trim().startsWith('token='));
+      
+      // 如果没有token cookie，直接返回false
+      if (!tokenCookie) {
+        console.log('没有找到token cookie，用户未登录');
+        setIsLoading(false);
+        return false;
+      }
+      
       setIsLoading(true);
       const response = await fetch('/api/auth/profile', {
         method: 'GET',
@@ -122,13 +133,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // 初始化时检查认证状态
   useEffect(() => {
-    // 只有在没有用户信息或token时才需要检查
-    if (!user || !token) {
-      checkAuth();
-    } else {
-      setIsLoading(false);
-    }
+    console.log('AuthContext初始化，检查认证状态');
+    checkAuth().then(isAuth => {
+      console.log('认证状态检查结果:', isAuth ? '已登录' : '未登录');
+      if (!isAuth && !isPublicPath(window.location.pathname)) {
+        // 如果未认证且不是公开页面，重定向到登录页
+        router.push('/login');
+      }
+    });
   }, []);
+
+  // 辅助函数：检查是否是公开路径
+  const isPublicPath = (path: string): boolean => {
+    // 根路径不是公开路由
+    if (path === '/') return false;
+    
+    const publicRoutes = ['/login', '/register', '/auth/login', '/auth/register'];
+    
+    // 检查是否是登录/注册相关路由
+    for (const route of publicRoutes) {
+      // 完全匹配
+      if (path === route) return true;
+      
+      // 前缀匹配
+      if (path.startsWith(`${route}/`)) return true;
+    }
+    
+    // 检查是否是认证组路由
+    if (path.startsWith('/(auth)') || path.startsWith('/auth/')) {
+      return true;
+    }
+    
+    return false;
+  };
 
   return (
     <AuthContext.Provider value={{ 

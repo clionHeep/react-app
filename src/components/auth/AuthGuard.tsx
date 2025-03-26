@@ -23,7 +23,7 @@ const routePermissions: Record<string, {
 };
 
 // 公开页面列表
-const PUBLIC_ROUTES = ['/', '/about', '/login', '/register'];
+const PUBLIC_ROUTES = ['/login', '/register', '/auth/login', '/auth/register', '/(auth)/login', '/(auth)/register'];
 
 interface AuthGuardProps {
   children: React.ReactNode;

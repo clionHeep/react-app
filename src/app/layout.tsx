@@ -18,12 +18,30 @@ import ReduxProvider from "@/redux/ReduxProvider";
 const inter = Inter({ subsets: ["latin"] });
 
 // 公开路由列表
-const PUBLIC_ROUTES = ['/login', '/register'];
+const PUBLIC_ROUTES = ['/login', '/register', '/auth/login', '/auth/register', '/(auth)/login', '/(auth)/register'];
 
 // 简单判断是否是公开路由
 function isPublicPath(path: string | null): boolean {
   if (!path) return false;
-  return PUBLIC_ROUTES.some(route => path === route || path.startsWith(`${route}/`));
+  
+  // 根路径不是公开路由
+  if (path === '/') return false;
+  
+  // 检查是否是登录/注册相关路由
+  for (const route of PUBLIC_ROUTES) {
+    // 完全匹配
+    if (path === route) return true;
+    
+    // 前缀匹配
+    if (path.startsWith(`${route}/`)) return true;
+  }
+  
+  // 检查是否是认证组路由
+  if (path.startsWith('/(auth)') || path.startsWith('/auth/')) {
+    return true;
+  }
+  
+  return false;
 }
 
 export default function RootLayout({
