@@ -3,14 +3,14 @@ import { db } from '@/db';
 import { verifyAdmin } from '@/utils/auth-utils';
 
 // 获取所有菜单
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // 查询所有菜单，按排序字段排序
     const menus = await db.menu.findMany({
-      orderBy: { order: 'asc' },
+      orderBy: { sort: 'asc' },
       include: {
         children: true,
-        permission: true
+        permissions: true
       }
     });
 
@@ -62,12 +62,15 @@ export async function POST(request: NextRequest) {
         name: data.name,
         path: data.path,
         icon: data.icon || null,
-        order: data.order || 0,
-        parentId: data.parentId || null,
-        permissionId: data.permissionId || null,
-        isVisible: data.isVisible ?? true,
-        isExternal: data.isExternal ?? false,
-        description: data.description || null
+        sort: data.order || 0,
+        hidden: data.isVisible === undefined ? false : !data.isVisible,
+        updatedAt: new Date(),
+        parent: data.parentId ? {
+          connect: { id: data.parentId }
+        } : undefined,
+        permissions: data.permissionId ? {
+          connect: [{ id: data.permissionId }]
+        } : undefined
       }
     });
 

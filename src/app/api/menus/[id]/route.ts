@@ -2,14 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
 import { verifyAdmin } from '@/utils/auth-utils';
 
-interface Params {
-  params: {
-    id: string;
-  };
-}
-
 // 获取单个菜单
-export async function GET(request: NextRequest, { params }: Params) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
     const id = parseInt(params.id);
     
@@ -24,7 +21,7 @@ export async function GET(request: NextRequest, { params }: Params) {
       where: { id },
       include: {
         children: true,
-        permission: true,
+        permissions: true,
         parent: true
       }
     });
@@ -50,7 +47,10 @@ export async function GET(request: NextRequest, { params }: Params) {
 }
 
 // 更新菜单
-export async function PUT(request: NextRequest, { params }: Params) {
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
     // 验证管理员权限
     const auth = await verifyAdmin(request);
@@ -100,12 +100,15 @@ export async function PUT(request: NextRequest, { params }: Params) {
         name: data.name,
         path: data.path,
         icon: data.icon !== undefined ? data.icon : existingMenu.icon,
-        order: data.order !== undefined ? data.order : existingMenu.order,
-        parentId: data.parentId !== undefined ? data.parentId : existingMenu.parentId,
-        permissionId: data.permissionId !== undefined ? data.permissionId : existingMenu.permissionId,
-        isVisible: data.isVisible !== undefined ? data.isVisible : existingMenu.isVisible,
-        isExternal: data.isExternal !== undefined ? data.isExternal : existingMenu.isExternal,
-        description: data.description !== undefined ? data.description : existingMenu.description
+        sort: data.order !== undefined ? data.order : existingMenu.sort,
+        hidden: data.isVisible !== undefined ? !data.isVisible : existingMenu.hidden,
+        updatedAt: new Date(),
+        parent: data.parentId !== undefined ? {
+          connect: data.parentId ? { id: data.parentId } : undefined
+        } : undefined,
+        permissions: data.permissionId !== undefined ? {
+          connect: data.permissionId ? [{ id: data.permissionId }] : undefined
+        } : undefined
       }
     });
 
@@ -124,7 +127,10 @@ export async function PUT(request: NextRequest, { params }: Params) {
 }
 
 // 删除菜单
-export async function DELETE(request: NextRequest, { params }: Params) {
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
     // 验证管理员权限
     const auth = await verifyAdmin(request);

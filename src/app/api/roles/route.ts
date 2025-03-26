@@ -3,7 +3,7 @@ import { db } from '@/db';
 import { verifyAdmin } from '@/utils/auth-utils';
 
 // 获取所有角色
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const roles = await db.role.findMany({
       include: {
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
 
     // 解析请求体
     const data = await request.json();
-    
+
     // 验证必填字段
     if (!data.name) {
       return NextResponse.json({
@@ -63,6 +63,8 @@ export async function POST(request: NextRequest) {
     // 创建角色
     const role = await db.role.create({
       data: {
+        createdAt: new Date(),
+        updatedAt: new Date(),
         name: data.name,
         description: data.description || null,
         // 如果提供了权限ID列表，建立关联

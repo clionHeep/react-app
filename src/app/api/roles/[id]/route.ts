@@ -9,7 +9,7 @@ interface Params {
 }
 
 // 获取单个角色
-export async function GET(request: NextRequest, { params }: Params) {
+export async function GET({ params }: Params) {
   try {
     const id = parseInt(params.id);
     
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest, { params }: Params) {
       include: {
         permissions: true,
         menus: true,
-        users: {
+        userrole: {
           include: {
             user: {
               select: {
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest, { params }: Params) {
     // 格式化返回数据，提取用户信息
     const formattedRole = {
       ...role,
-      users: role.users?.map(ur => ur.user) || []
+      users: role.userrole?.map(ur => ur.user) || []
     };
 
     return NextResponse.json({
@@ -120,7 +120,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
     }
 
     // 构建更新数据
-    const updateData: any = {
+    const updateData = {
       name: data.name || existingRole.name,
       description: data.description !== undefined ? data.description : existingRole.description,
     };
@@ -162,7 +162,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
       include: {
         permissions: true,
         menus: true,
-        users: {
+        userrole: {
           include: {
             user: {
               select: {
@@ -180,7 +180,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
     // 格式化返回数据，提取用户信息
     const formattedRole = {
       ...updatedRole,
-      users: updatedRole.users?.map(ur => ur.user) || []
+      users: updatedRole.userrole?.map(ur => ur.user) || []
     };
 
     return NextResponse.json({
@@ -222,7 +222,7 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     const existingRole = await db.role.findUnique({
       where: { id },
       include: {
-        users: true
+        userrole: true
       }
     });
 
@@ -242,7 +242,7 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     }
 
     // 检查是否有用户关联此角色
-    if (existingRole.users && existingRole.users.length > 0) {
+    if (existingRole.userrole && existingRole.userrole.length > 0) {
       return NextResponse.json({
         success: false,
         message: '此角色已分配给用户，请先移除关联用户'

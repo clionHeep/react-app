@@ -23,8 +23,8 @@ export async function GET(request: NextRequest, { params }: Params) {
     const permission = await db.permission.findUnique({
       where: { id },
       include: {
-        roles: true,
-        menu: true
+        menus: true,
+        roles: true
       }
     });
 
@@ -71,7 +71,11 @@ export async function PUT(request: NextRequest, { params }: Params) {
 
     // 检查权限是否存在
     const existingPermission = await db.permission.findUnique({
-      where: { id }
+      where: { id },
+      include: {
+        roles: true,
+        menus: true
+      }
     });
 
     if (!existingPermission) {
@@ -111,7 +115,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
       },
       include: {
         roles: true,
-        menu: true
+        menus: true
       }
     });
 
@@ -155,7 +159,7 @@ export async function DELETE(request: NextRequest, { params }: Params) {
       where: { id },
       include: {
         roles: true,
-        menu: true
+        menus: true
       }
     });
 
@@ -175,7 +179,7 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     }
 
     // 检查是否有菜单关联此权限
-    if (existingPermission.menu && existingPermission.menu.length > 0) {
+    if (existingPermission.menus && existingPermission.menus.length > 0) {
       return NextResponse.json({
         success: false,
         message: '此权限已关联菜单，请先移除关联菜单'

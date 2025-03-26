@@ -1,7 +1,6 @@
 import { AxiosError, AxiosResponse } from 'axios';
 import { ApiError, ApiResponse } from '@/types/api';
 import { message } from 'antd';
-import { showMessage } from './message';
 
 /**
  * 处理成功响应

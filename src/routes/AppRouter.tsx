@@ -49,27 +49,29 @@ const LoadingFallback = () => (
 const RouteRenderer: React.FC = () => {
   const { currentPath } = useAppRouter();
   const [CurrentComponent, setCurrentComponent] = useState<React.ComponentType<RouteComponentProps> | null>(null);
+  const router = useRouter();
+  const pathname = usePathname() || '/';
 
   // 根据当前路径找到匹配的路由配置
-  const findMatchingRoute = (
-    routes: RouteConfig[],
-    path: string
-  ): RouteConfig | null => {
-    for (const route of routes) {
-      if (route.path === path) {
-        return route;
-      }
-      
-      if (route.children && route.children.length > 0) {
-        const childRoute = findMatchingRoute(route.children, path);
-        if (childRoute) {
-          return childRoute;
+  const findMatchingRoute = React.useCallback(
+    (routes: RouteConfig[], path: string): RouteConfig | null => {
+      for (const route of routes) {
+        if (route.path === path) {
+          return route;
+        }
+        
+        if (route.children && route.children.length > 0) {
+          const childRoute = findMatchingRoute(route.children, path);
+          if (childRoute) {
+            return childRoute;
+          }
         }
       }
-    }
-    
-    return null;
-  };
+      
+      return null;
+    },
+    []
+  );
 
   useEffect(() => {
     const matchedRoute = findMatchingRoute(routes, currentPath);
@@ -80,7 +82,14 @@ const RouteRenderer: React.FC = () => {
       // 如果没有找到匹配的路由，可以设置一个默认组件或404组件
       setCurrentComponent(null);
     }
-  }, [currentPath]);
+  }, [currentPath, findMatchingRoute]);
+
+  useEffect(() => {
+    // 监听路由变化
+    if (router && pathname) {
+      findMatchingRoute(routes, pathname);
+    }
+  }, [router, pathname, findMatchingRoute]);
 
   if (!CurrentComponent) {
     return <div>页面不存在</div>;

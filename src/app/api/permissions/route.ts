@@ -3,7 +3,7 @@ import { db } from '@/db';
 import { verifyAdmin } from '@/utils/auth-utils';
 
 // 获取所有权限
-export async function GET(request: Request) {
+export async function GET() {
   try {
     const permissions = await db.permission.findMany({
       orderBy: { id: 'asc' }
@@ -60,6 +60,8 @@ export async function POST(request: NextRequest) {
     // 创建权限
     const permission = await db.permission.create({
       data: {
+        createdAt: new Date(),
+        updatedAt: new Date(),
         name: data.name,
         code: data.code,
         description: data.description || null

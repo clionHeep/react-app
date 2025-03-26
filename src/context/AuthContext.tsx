@@ -33,30 +33,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // 用于防止重复请求的锁
   let isFetchingUserInfo = false;
 
-  // 初始化时检查是否已登录
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const token = localStorage.getItem('accessToken');
-        if (token) {
-          // 获取用户详细信息
-          await fetchUserInfo();
-        }
-      } catch (error) {
-        console.error('认证检查失败:', error);
-        // 清除本地存储的token
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    checkAuth();
-  }, []);
-
   // 获取用户详细信息（菜单和权限）
-  const fetchUserInfo = async () => {
+  const fetchUserInfo = React.useCallback(async () => {
     // 如果已经在获取用户信息，则跳过
     if (isFetchingUserInfo) {
       console.log('用户信息请求已在进行中，跳过重复请求');
@@ -84,7 +62,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       isFetchingUserInfo = false;
     }
-  };
+  }, []);
+
+  // 初始化时检查是否已登录
+  useEffect(() => {
+    // 定义一个节流的获取用户信息函数
+    const initializeAuth = async () => {
+      const accessToken = localStorage.getItem('accessToken');
+      console.log('初始化认证，检查令牌:', accessToken ? '存在' : '不存在');
+      
+      if (accessToken) {
+        // 有token，获取用户信息
+        await fetchUserInfo();
+      } else {
+        // 没有token，认为用户未登录
+        setIsAuthenticated(false);
+        setUser(null);
+        setMenus([]);
+        setPermissions([]);
+        setRoles([]);
+      }
+    };
+
+    // 初始化认证状态
+    initializeAuth();
+    
+    // 添加fetchUserInfo作为依赖
+  }, [fetchUserInfo]);
 
   // 登录方法
   const login = async (username: string, password: string) => {

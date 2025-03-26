@@ -22,7 +22,7 @@ export class RegisterDto {
   name?: string;
 
   @IsOptional()
-  roles?: string[] | string | null | undefined | any;
+  roles?: string[] | string | null | undefined;
 
   @IsOptional()
   @IsString()
