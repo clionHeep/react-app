@@ -8,7 +8,7 @@ import { JwtAuthGuard } from './jwt-auth.guard';
 import type { Request } from 'express';
 import type { UserInfo } from '../types/types';
 import { Roles } from '../lib/services/decorators/roles.decorator';
-import { RolesGuard } from '../guards/roles.guard';
+import { RolesGuard } from '../lib/services/guards/roles.guard';
 
 @Controller('auth')
 export class AuthController {
