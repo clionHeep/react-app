@@ -22,7 +22,7 @@ export default function AuthForm({ type }: AuthFormProps) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [messageApi, contextHolder] = message.useMessage();
-  const { login } = useAuth();
+  const { login, resetLoading } = useAuth();
 
   const handleLogin = async (values: { username: string; password: string }) => {
     setError("");
@@ -33,10 +33,40 @@ export default function AuthForm({ type }: AuthFormProps) {
       
       if (success) {
         showMessage.success(AUTH_MESSAGES.LOGIN_SUCCESS);
-        router.push("/");
+        
+        // 获取目标跳转路径（如果有）
+        const urlParams = new URLSearchParams(window.location.search);
+        const redirectPath = urlParams.get('from') || '/';
+        
+        // 登录成功日志
+        console.log('登录成功，准备跳转到:', redirectPath);
+        
+        // 先关闭表单loading状态，避免加载指示器显示
+        setLoading(false);
+        
+        // 使用更长的延迟，确保状态和token完全更新
+        // 这段时间内用户会看到登录成功的消息提示
+        setTimeout(() => {
+          // 确认token存在且认证状态已设置
+          const token = localStorage.getItem('accessToken');
+          if (token) {
+            console.log('跳转到目标页面:', redirectPath);
+            // 使用replace而不是push，避免浏览器历史中出现登录页
+            router.replace(redirectPath);
+          } else {
+            console.error('令牌未正确设置，延长等待');
+            // 如果token还没设置好，再等一会
+            setTimeout(() => {
+              router.replace(redirectPath);
+            }, 500);
+          }
+        }, 800); // 增加到800ms
       } else {
         showMessage.error(AUTH_MESSAGES.LOGIN_FAILED);
         setError("用户名或密码错误");
+        setLoading(false);
+        // 确保全局loading状态也被重置
+        resetLoading();
       }
     } catch (error: unknown) {
       console.error("登录失败:", error);
@@ -62,8 +92,10 @@ export default function AuthForm({ type }: AuthFormProps) {
       } else {
         setError("登录失败，请稍后再试");
       }
-    } finally {
+
       setLoading(false);
+      // 确保全局loading状态也被重置
+      resetLoading();
     }
   };
 

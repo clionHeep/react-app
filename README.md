@@ -13,6 +13,8 @@ pnpm dev
 # or
 bun dev
 
+npx prisma generate
+   
 npx prisma db push
 
 npx prisma --datasource-provider mysql
@@ -44,6 +46,7 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 # 认证系统说明
 
 本系统实现了如下认证功能：
+
 1. 账号密码登录 - 用户只能通过用户名+密码登录系统
 2. 忘记密码 - 通过邮箱或手机验证码重置密码
 3. 用户注册 - 新用户需要使用用户名、邮箱（可选）和手机号（可选）注册系统
@@ -63,6 +66,7 @@ npx prisma migrate dev --name add_username_and_phone
 ## API接口
 
 ### 用户注册
+
 ```
 POST /api/auth/register
 {
@@ -75,6 +79,7 @@ POST /api/auth/register
 ```
 
 ### 账号密码登录
+
 ```
 POST /api/auth/login
 {
@@ -84,6 +89,7 @@ POST /api/auth/login
 ```
 
 ### 发送重置密码邮箱验证码
+
 ```
 POST /api/auth/forgot-password/email
 {
@@ -92,6 +98,7 @@ POST /api/auth/forgot-password/email
 ```
 
 ### 发送重置密码短信验证码
+
 ```
 POST /api/auth/forgot-password/phone
 {
@@ -100,6 +107,7 @@ POST /api/auth/forgot-password/phone
 ```
 
 ### 重置密码
+
 ```
 POST /api/auth/reset-password
 {

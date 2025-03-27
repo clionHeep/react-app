@@ -8,24 +8,26 @@ datasource db {
 }
 
 model menu {
-  id          Int          @id @default(autoincrement())
+  id          Int              @id @default(autoincrement())
   name        String
   path        String?
   component   String?
   redirect    String?
   icon        String?
-  sort        Int          @default(0)
-  hidden      Boolean      @default(false)
+  sort        Int              @default(0)
+  hidden      Boolean          @default(false)
   parentId    Int?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
   
   // 关系
-  parent      menu?        @relation("menuTomenu", fields: [parentId], references: [id], map: "Menu_parentId_fkey")
-  children    menu[]       @relation("menuTomenu")
-  rolemenu    rolemenu[]   // 通过中间表与角色关联
-  permissions permission[] @relation("MenuToPermission") // 多对多关系：菜单-权限
-  roles       role[]       @relation("RoleToMenu") // 多对多关系：菜单-角色
+  parent      menu?            @relation("menuTomenu", fields: [parentId], references: [id], map: "Menu_parentId_fkey")
+  children    menu[]           @relation("menuTomenu")
+  rolemenu    rolemenu[]       // 通过中间表与角色关联
+  roles       role[]           @relation("RoleToMenu") // 多对多关系：菜单-角色
+  
+  // 修改：统一使用menuPermission作为菜单-权限关联表
+  menuPermissions menuPermission[] // 菜单-权限详细关联，包含actionType
 
   @@index([parentId], map: "Menu_parentId_fkey")
 }
@@ -36,12 +38,14 @@ model permission {
   name           String
   description    String?
   createdAt      DateTime         @default(now())
-  updatedAt      DateTime
+  updatedAt      DateTime         @updatedAt
   
   // 关系
   rolepermission rolepermission[] // 通过中间表与角色关联
   roles          role[]           @relation("RoleToPermission") // 多对多关系：权限-角色
-  menus          menu[]           @relation("MenuToPermission") // 多对多关系：权限-菜单
+  
+  // 修改：统一使用menuPermission作为权限-菜单关联表
+  menuPermissions menuPermission[] // 权限-菜单详细关联，包含actionType
 }
 
 model post {
@@ -51,7 +55,7 @@ model post {
   published Boolean  @default(false)
   authorId  Int?
   createdAt DateTime @default(now())
-  updatedAt DateTime
+  updatedAt DateTime @updatedAt
   user      user?    @relation(fields: [authorId], references: [id], map: "Post_authorId_fkey")
 
   @@index([authorId], map: "Post_authorId_fkey")
@@ -63,7 +67,7 @@ model refreshtoken {
   userId    Int      @unique(map: "RefreshToken_userId_key")
   expiresAt DateTime
   createdAt DateTime @default(now())
-  updatedAt DateTime
+  updatedAt DateTime @updatedAt
   user      user     @relation(fields: [userId], references: [id], onDelete: Cascade, map: "RefreshToken_userId_fkey")
 }
 
@@ -71,8 +75,12 @@ model role {
   id             Int              @id @default(autoincrement())
   name           String           @unique(map: "Role_name_key")
   description    String?
+  // 父角色ID，形成角色继承关系
+  parentId       Int?
+  // 是否是系统内置角色，内置角色不可删除
+  isSystem       Boolean          @default(false)
   createdAt      DateTime         @default(now())
-  updatedAt      DateTime
+  updatedAt      DateTime         @updatedAt
   
   // 关系
   rolemenu       rolemenu[]       // 通过中间表与菜单关联
@@ -81,6 +89,12 @@ model role {
   permissions    permission[]     @relation("RoleToPermission") // 多对多关系：角色-权限
   menus          menu[]           @relation("RoleToMenu") // 多对多关系：角色-菜单
   users          user[]           @relation("UserToRole") // 多对多关系：角色-用户
+  
+  // 角色继承关系
+  parent         role?            @relation("RoleInheritance", fields: [parentId], references: [id], onDelete: SetNull)
+  children       role[]           @relation("RoleInheritance")
+  
+  @@index([parentId])
 }
 
 model rolemenu {
@@ -162,4 +176,23 @@ enum user_status {
   ACTIVE
   INACTIVE
   LOCKED
+}
+
+// 菜单权限关联表 - 优化字段和关系名称
+model menuPermission {
+  id           Int        @id @default(autoincrement())
+  menuId       Int
+  permissionId Int
+  // 操作类型：view(查看), add(添加), edit(编辑), delete(删除)等
+  actionType   String     @default("view")
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  
+  // 修改关系名称使其与model一致
+  menu         menu       @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  permission   permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([menuId, permissionId, actionType])
+  @@index([menuId])
+  @@index([permissionId])
 }

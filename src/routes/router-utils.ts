@@ -1,5 +1,6 @@
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { routes, RouteConfig } from './constants';
+// import { useAuth } from '@/context/AuthContext';
 
 // 路由键类型，对应路由名称
 export type RouteKey = string;
@@ -79,35 +80,33 @@ export function resolveRouteLocation(location: RouteLocationNamedRaw): string {
 }
 
 /**
- * 路由钩子，提供类似Vue Router的功能
+ * 获取当前用户的可访问路由
+//  */
+// export const getUserRoutes = () => {
+//   const { isAuthenticated, permissions, roles } = useAuth();
+  
+//   // 未登录用户只能访问公共路由
+//   if (!isAuthenticated) {
+//     return publicRoutes;
+//   }
+  
+//   // 获取角色ID或名称列表
+//   const roleIdentifiers = roles.map(role => 
+//     typeof role === 'string' ? role : (role.code || role.id?.toString() || role.name || '')
+//   ).filter(Boolean);
+  
+//   // 获取静态路由 + 根据权限过滤后的权限路由
+//   const filteredPermissionRoutes = filterRoutesByPermissions(permissionRoutes, permissions);
+//   return [...staticRoutes, ...filteredPermissionRoutes];
+// };
+
+/**
+ * 路由钩子，提供导航功能
  */
-export function useRouterPush() {
+export function useRouterNavigation() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  
-  const routerPush = router.push;
-  const routerBack = router.back;
-  
-  // 通过路由名称进行导航
-  async function routerPushByKey(key: RouteKey, options?: RouterPushOptions) {
-    const { params, query } = options || {};
-    
-    const routeLocation: RouteLocationNamedRaw = {
-      name: key
-    };
-    
-    if (query && Object.keys(query).length) {
-      routeLocation.query = query;
-    }
-    
-    if (params && Object.keys(params).length) {
-      routeLocation.params = params;
-    }
-    
-    const path = resolveRouteLocation(routeLocation);
-    return routerPush(path);
-  }
   
   // 获取当前路由信息
   function getCurrentRoute() {
@@ -120,11 +119,53 @@ export function useRouterPush() {
     };
   }
   
+  // 定义明确的类型
+  type RouteLocation = string | RouteConfig | { 
+    path: string; 
+    query?: Record<string, string>;
+    target?: string;
+  };
+  
+  // 导航到指定路由
+  function navigateTo(to: RouteLocation) {
+    // 字符串路径
+    if (typeof to === 'string') {
+      router.push(to);
+      return;
+    }
+    
+    // 路由配置对象
+    if ('path' in to) {
+      // 如果是外部链接
+      if (isExternal(to.path)) {
+        const target = 'target' in to ? to.target || '_blank' : '_blank';
+        window.open(to.path, target);
+        return;
+      }
+      
+      // 处理查询参数
+      if ('query' in to && to.query) {
+        const searchParams = new URLSearchParams();
+        Object.entries(to.query).forEach(([key, value]) => {
+          searchParams.append(key, String(value));
+        });
+        
+        const queryString = searchParams.toString();
+        if (queryString) {
+          router.push(`${to.path}?${queryString}`);
+          return;
+        }
+      }
+      
+      router.push(to.path);
+      return;
+    }
+  }
+  
   return {
-    push: routerPush,
-    pushByName: routerPushByKey,
-    back: routerBack,
-    currentRoute: getCurrentRoute()
+    currentRoute: getCurrentRoute(),
+    navigateTo,
+    router
   };
 }
 

@@ -4,7 +4,16 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { loginApi, getUserInfoApi } from '@/lib/services/auth/authService';
 import { User, Menu, Permission, Role } from '@/types/api';
 import { showMessage } from '@/utils/message';
-import { Spin } from 'antd';
+
+// 定义路径权限映射类型
+interface PathPermissionMap {
+  [path: string]: {
+    requiredPermissions: string[];
+    actions: {
+      [action: string]: string[];
+    };
+  };
+}
 
 // 定义认证上下文的类型
 interface AuthContextType {
@@ -14,8 +23,12 @@ interface AuthContextType {
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
   menus: Menu[]; // 用户菜单
-  permissions: Permission[]; // 用户权限
+  permissions: string[]; // 用户权限代码
   roles: Role[]; // 用户角色
+  pathPermissionMap: PathPermissionMap; // 路径权限映射
+  hasPermission: (permissionCode: string) => boolean; // 检查是否有权限
+  hasPathPermission: (path: string, action?: string) => boolean; // 检查是否有路径权限
+  resetLoading: () => void; // 重置加载状态
 }
 
 // 创建认证上下文
@@ -27,55 +40,245 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [menus, setMenus] = useState<Menu[]>([]);
-  const [permissions, setPermissions] = useState<Permission[]>([]);
+  const [permissions, setPermissions] = useState<string[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
+  const [pathPermissionMap, setPathPermissionMap] = useState<PathPermissionMap>({});
 
   // 用于防止重复请求的锁
   let isFetchingUserInfo = false;
 
+  // 检查是否有权限
+  const hasPermission = (permissionCode: string): boolean => {
+    return permissions.includes(permissionCode);
+  };
+
+  // 检查是否有路径权限
+  const hasPathPermission = (path: string, action: string = 'view'): boolean => {
+    // 1. 精确匹配路径
+    if (pathPermissionMap[path]) {
+      const pathPerms = pathPermissionMap[path];
+      
+      // 如果有特定操作的权限要求，检查它
+      if (pathPerms.actions[action] && pathPerms.actions[action].length > 0) {
+        return pathPerms.actions[action].some(perm => hasPermission(perm));
+      }
+      
+      // 否则检查路径的所有所需权限
+      return pathPerms.requiredPermissions.some(perm => hasPermission(perm));
+    }
+    
+    // 2. 如果没有精确匹配，尝试匹配父路径
+    const segments = path.split('/').filter(Boolean);
+    for (let i = segments.length - 1; i >= 0; i--) {
+      const partialPath = '/' + segments.slice(0, i + 1).join('/');
+      if (pathPermissionMap[partialPath]) {
+        const pathPerms = pathPermissionMap[partialPath];
+        
+        // 如果有特定操作的权限要求，检查它
+        if (pathPerms.actions[action] && pathPerms.actions[action].length > 0) {
+          return pathPerms.actions[action].some(perm => hasPermission(perm));
+        }
+        
+        // 否则检查路径的所有所需权限
+        return pathPerms.requiredPermissions.some(perm => hasPermission(perm));
+      }
+    }
+    
+    // 3. 如果路径映射中没有找到，生成一个可能的权限代码
+    if (segments.length > 0) {
+      const resource = segments[0];
+      const possiblePermissions = [
+        `${resource}:manage`,
+        `${resource}:${action}`,
+        `${resource}:view`
+      ];
+      return possiblePermissions.some(perm => hasPermission(perm));
+    }
+    
+    // 默认允许访问
+    return true;
+  };
+
+  // 根据菜单和权限构建路径权限映射
+  const buildPathPermissionMap = (menus: Menu[], permissions: string[]) => {
+    const pathMap: PathPermissionMap = {};
+    
+    // 递归处理菜单树
+    const processMenu = (menu: Menu) => {
+      if (menu.path) {
+        // 初始化路径映射
+        pathMap[menu.path] = {
+          requiredPermissions: [],
+          actions: {
+            view: [],
+            add: [],
+            edit: [],
+            delete: []
+          }
+        };
+        
+        // 找出此菜单路径相关的权限
+        const menuPath = menu.path.replace(/^\//, '').replace(/\//g, ':');
+        const menuPermissions = permissions.filter(p => p && typeof p === 'string' && (p.startsWith(menuPath) || p.includes(menuPath)));
+        
+        // 按操作类型分类权限
+        pathMap[menu.path].requiredPermissions = menuPermissions.filter(p => 
+          p && typeof p === 'string' && (p.includes(':view') || p.endsWith(':manage'))
+        );
+        pathMap[menu.path].actions.view = menuPermissions.filter(p => 
+          p && typeof p === 'string' && (p.includes(':view') || p.endsWith(':manage'))
+        );
+        pathMap[menu.path].actions.add = menuPermissions.filter(p => 
+          p && typeof p === 'string' && (p.includes(':add') || p.endsWith(':manage'))
+        );
+        pathMap[menu.path].actions.edit = menuPermissions.filter(p => 
+          p && typeof p === 'string' && (p.includes(':edit') || p.endsWith(':manage'))
+        );
+        pathMap[menu.path].actions.delete = menuPermissions.filter(p => 
+          p && typeof p === 'string' && (p.includes(':delete') || p.endsWith(':manage'))
+        );
+      }
+      
+      // 处理子菜单
+      if (menu.children) {
+        menu.children.forEach(processMenu);
+      }
+    };
+    
+    // 处理所有菜单
+    menus.forEach(processMenu);
+    return pathMap;
+  };
+
   // 获取用户详细信息（菜单和权限）
   const fetchUserInfo = React.useCallback(async () => {
-    // 如果已经在获取用户信息，则跳过
     if (isFetchingUserInfo) {
-      console.log('用户信息请求已在进行中，跳过重复请求');
-      return true;
+      console.log('已经在获取用户信息中，跳过重复请求');
+      return true; // 返回true避免触发认证失败流程
     }
-
-    isFetchingUserInfo = true;
+    
+    // 导入设置用户信息请求状态的函数
+    const { setUserInfoRequestStatus } = await import('@/lib/axios');
     
     try {
+      isFetchingUserInfo = true;
+      setUserInfoRequestStatus(true); // 设置为正在请求用户信息
+      
+      console.log('开始获取用户信息...');
+      const accessToken = localStorage.getItem('accessToken');
+      
+      if (!accessToken) {
+        console.error('无法获取用户信息: 缺少访问令牌');
+        return false;
+      }
+      
+      // 调用API获取用户信息
       const userInfo = await getUserInfoApi();
+      
+      // 检查数据完整性
+      if (!userInfo || !userInfo.user) {
+        console.error('获取的用户信息不完整');
+        return false;
+      }
       
       // 设置用户信息
       setUser(userInfo.user as unknown as User);
-      setMenus(userInfo.menus || []);
-      setPermissions(userInfo.permissions || []);
-      setRoles(userInfo.roles || []);
-      setIsAuthenticated(true);
       
+      // 处理菜单数据 - 确保数据有效
+      const userMenus: Menu[] = Array.isArray(userInfo.menus) ? userInfo.menus : [];
+      setMenus(userMenus);
+      
+      // 确保permissions是字符串数组
+      let userPermissions: string[] = [];
+      if (Array.isArray(userInfo.permissions)) {
+        userPermissions = userInfo.permissions
+          .map((p: Permission | string) => {
+            if (typeof p === 'string') return p;
+            if (p && typeof p === 'object' && 'code' in p) return p.code;
+            return '';
+          })
+          .filter(Boolean);
+      }
+      setPermissions(userPermissions);
+      
+      // 确保roles是数组
+      const userRoles = Array.isArray(userInfo.roles) ? userInfo.roles : [];
+      setRoles(userRoles);
+      
+      // 构建路径权限映射
+      if (userMenus.length > 0 && userPermissions.length > 0) {
+        const permissionMap = buildPathPermissionMap(userMenus, userPermissions);
+        setPathPermissionMap(permissionMap);
+      }
+      
+      setIsAuthenticated(true);
       return true;
     } catch (error) {
       console.error('获取用户信息失败:', error);
-      setIsAuthenticated(false);
-      setUser(null);
+      // 只在需要时才重置状态，避免不必要的重定向
+      if (error && typeof error === 'object') {
+        const err = error as Record<string, unknown>;
+        // 只有在真正的401错误时才重置认证状态
+        if (err.response && typeof err.response === 'object' &&
+            (err.response as Record<string, unknown>).status === 401) {
+          setIsAuthenticated(false);
+          setUser(null);
+          setMenus([]);
+          setPermissions([]);
+          setRoles([]);
+          setPathPermissionMap({});
+        } else {
+          // 对于其他类型的错误（比如网络错误），保持之前的认证状态
+          console.log('保持现有认证状态，避免因临时错误导致重定向');
+        }
+      }
       return false;
     } finally {
       isFetchingUserInfo = false;
+      setUserInfoRequestStatus(false); // 用户信息请求结束
     }
   }, []);
 
   // 初始化时检查是否已登录
   useEffect(() => {
-    // 定义一个节流的获取用户信息函数
+    // 定义一个初始化认证的函数
     const initializeAuth = async () => {
+      // 增加超时保护，延长超时时间
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('获取用户信息超时')), 20000) // 增加到20秒
+      );
+      
       const accessToken = localStorage.getItem('accessToken');
       console.log('初始化认证，检查令牌:', accessToken ? '存在' : '不存在');
       
-      if (accessToken) {
-        // 有token，获取用户信息
-        await fetchUserInfo();
+      // 检查当前路径，如果已经在登录页则不尝试获取用户信息
+      const isLoginPage = typeof window !== 'undefined' && window.location.pathname.includes('/login');
+      
+      if (accessToken && !isLoginPage) {
+        try {
+          // 有token，获取用户信息（带超时保护）
+          await Promise.race([fetchUserInfo(), timeoutPromise]);
+        } catch (error) {
+          console.error('初始化认证失败:', error);
+          
+          // 只在确定是认证失败的情况下才清理状态
+          const isAuthError = 
+            error.message === '获取用户信息超时' || 
+            (error.response && error.response.status === 401);
+          
+          if (isAuthError) {
+            setIsAuthenticated(false);
+            setUser(null);
+            // 清除无效令牌
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('refreshToken');
+          } else {
+            // 对于网络错误等暂时性问题，不要立即认为用户未认证
+            console.log('保持当前认证状态，避免因临时错误导致重定向');
+          }
+        }
       } else {
-        // 没有token，认为用户未登录
+        // 没有token或已在登录页，认为用户未登录
         setIsAuthenticated(false);
         setUser(null);
         setMenus([]);
@@ -89,9 +292,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     // 初始化认证状态
     initializeAuth();
-    
-    // 添加fetchUserInfo作为依赖
   }, [fetchUserInfo]);
+
+  // 重置loading状态的方法
+  const resetLoading = () => {
+    setIsLoading(false);
+  };
 
   // 登录方法
   const login = async (username: string, password: string) => {
@@ -105,25 +311,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       // 保存token到本地存储 - 确保不含Bearer前缀
       if (response && response.accessToken) {
+        // 先保存token到本地存储
         localStorage.setItem('accessToken', response.accessToken);
-        localStorage.removeItem('token'); // 移除旧的token键，如果有的话
         
         if (response.refreshToken) {
           localStorage.setItem('refreshToken', response.refreshToken);
         }
         
+        // 立即设置用户基本信息（如果API返回了）
+        if (response.user) {
+          setUser(response.user);
+        }
+        
+        // 同步更新认证状态为true
+        setIsAuthenticated(true);
+        console.log('已设置认证状态为true');
+        
         // 获取用户详细信息（菜单和权限）
-        const success = await fetchUserInfo();
-        return success;
+        try {
+          const success = await fetchUserInfo();
+          // 登录成功后重置loading状态
+          setIsLoading(false);
+          return success;
+        } catch (error) {
+          // 即使获取用户详情失败，只要我们有token，就认为登录成功
+          console.error('获取用户详情失败，但登录仍然有效:', error);
+          setIsLoading(false);
+          return true;
+        }
       } else {
         console.error('登录响应中缺少token数据');
+        setIsLoading(false);
         return false;
       }
     } catch (error) {
       console.error('登录失败:', error);
-      return false;
-    } finally {
       setIsLoading(false);
+      return false;
     }
   };
 
@@ -140,19 +364,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     showMessage.success('已安全退出系统');
   };
 
-  // 如果正在加载，显示加载指示器
-  if (isLoading) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <Spin size="large">
-          <div style={{ padding: '30px', textAlign: 'center' }}>
-            <div>正在加载...</div>
-          </div>
-        </Spin>
-      </div>
-    );
-  }
-
+  // 返回上下文提供器和子组件
   return (
     <AuthContext.Provider value={{ 
       user, 
@@ -162,7 +374,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       logout,
       menus,
       permissions,
-      roles
+      roles,
+      pathPermissionMap,
+      hasPermission,
+      hasPathPermission,
+      resetLoading
     }}>
       {children}
     </AuthContext.Provider>

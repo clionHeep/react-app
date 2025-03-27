@@ -6,7 +6,8 @@ import type { LayoutProps } from "@/types";
 import Logo from "@/components/common/Logo";
 import UserInfo from "@/components/user/UserInfo";
 import FullscreenButton from "@/components/common/FullscreenButton";
-import { defaultMenuItems } from "@/routes/constants";
+import { useAuth } from '@/context/AuthContext';
+import { getMenuIcon } from '@/routes/constants';
 import StaticLoadingPlaceholder from "@/components/common/StaticLoadingPlaceholder";
 import BreadcrumbHandler from "@/components/layouts/BreadcrumbHandler";
 import { getBaseStyles } from "@/styles/layoutStyles";
@@ -15,6 +16,24 @@ import { useRouter, usePathname } from "next/navigation";
 import { isExternal, resolvePath } from "@/routes/router-utils";
 
 const { Header, Content } = Layout;
+
+interface MenuItemType {
+  id: number;
+  name: string;
+  path?: string;
+  icon?: string;
+  parentId?: number | null;
+  children?: MenuItemType[];
+  hidden?: boolean;
+}
+
+// 定义Ant Design Menu组件使用的菜单项类型
+interface AntMenuItemType {
+  key: string;
+  icon?: React.ReactNode;
+  label: string;
+  children?: AntMenuItemType[];
+}
 
 const TopLayout: React.FC<LayoutProps> = ({
   children,
@@ -25,44 +44,92 @@ const TopLayout: React.FC<LayoutProps> = ({
   const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+  const { menus } = useAuth();
+  const [menuItems, setMenuItems] = useState<AntMenuItemType[]>([]);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // 处理菜单点击
+  const generateMenuItems = (menuItems: MenuItemType[]) => {
+    console.log('[TopLayout] 生成菜单项，菜单数据:', menuItems);
+    
+    if (!menuItems || !Array.isArray(menuItems) || menuItems.length === 0) {
+      console.warn('[TopLayout] 菜单数据为空或格式不正确');
+      return [];
+    }
+    
+    return menuItems
+      .filter(item => !item.hidden)
+      .map(item => {
+        const hasChildren = item.children && item.children.length > 0;
+        
+        console.log(`[TopLayout] 处理菜单项: ${item.name}, 路径: ${item.path || '未指定'}`);
+        
+        if (hasChildren) {
+          return {
+            key: item.path || `menu-${item.id}`,
+            icon: getMenuIcon(item.icon || ""),
+            label: item.name,
+            children: generateMenuItems(item.children),
+          };
+        }
+        
+        return {
+          key: item.path || `menu-${item.id}`,
+          icon: getMenuIcon(item.icon || ""),
+          label: item.name,
+        };
+      });
+  };
+
+  useEffect(() => {
+    console.log('[TopLayout] === 菜单数据更新 ===');
+    console.log('[TopLayout] 菜单数据原始值:', menus);
+    
+    if (menus && Array.isArray(menus) && menus.length > 0) {
+      try {
+        const items = generateMenuItems(menus as unknown as MenuItemType[]);
+        console.log('[TopLayout] 生成的菜单项:', items);
+        setMenuItems(items);
+      } catch (error) {
+        console.error('[TopLayout] 处理菜单数据时出错:', error);
+        console.warn('[TopLayout] 使用空菜单');
+        setMenuItems([]);
+      }
+    } else {
+      console.warn('[TopLayout] 警告: 无菜单数据或格式不正确');
+      console.log('[TopLayout] menus类型:', typeof menus);
+      console.log('[TopLayout] 是否为数组:', Array.isArray(menus));
+      console.log('[TopLayout] 数组长度:', Array.isArray(menus) ? menus.length : '非数组');
+      setMenuItems([]);
+    }
+  }, [menus]);
+
   const handleMenuClick = ({ key }: { key: string }) => {
-    // 外部链接，使用window.open打开
     if (isExternal(key)) {
       window.open(key, '_blank');
       return;
     }
     
-    // 内部路径，使用Next.js 15 App Router导航
     const result = resolvePath(key);
     
     if (typeof result === 'string') {
-      // Next.js 15优化：使用router.push进行导航，默认支持无需刷新的客户端导航
       router.push(result, { scroll: true });
     } else {
-      // 使用对象形式传递查询参数 (Next.js 15支持)
       const { path, query } = result;
       
-      // 构建查询字符串
       const queryString = new URLSearchParams(query).toString();
       const url = queryString ? `${path}?${queryString}` : path;
       
-      // 带滚动行为的导航
       router.push(url, { scroll: true });
     }
   };
 
-  // 如果未挂载，显示静态加载占位符
   if (!mounted) {
     return <StaticLoadingPlaceholder />;
   }
 
-  // 获取基础样式
   const styles = getBaseStyles(token);
 
   return (
@@ -98,7 +165,7 @@ const TopLayout: React.FC<LayoutProps> = ({
         <Menu
           mode="horizontal"
           selectedKeys={[pathname || '/']}
-          items={defaultMenuItems}
+          items={menuItems}
           onClick={handleMenuClick}
           style={styles.menu}
           className="fixed-menu-items"
@@ -109,7 +176,6 @@ const TopLayout: React.FC<LayoutProps> = ({
         </div>
       </Header>
 
-      {/* 基于历史导航的面包屑 */}
       <BreadcrumbHandler style={styles.breadcrumb} />
 
       <Content style={styles.content}>

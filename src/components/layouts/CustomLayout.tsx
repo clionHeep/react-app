@@ -7,7 +7,7 @@ import type { LayoutProps } from "@/types";
 import Logo from "@/components/common/Logo";
 import UserInfo from "@/components/user/UserInfo";
 import FullscreenButton from "@/components/common/FullscreenButton";
-import { defaultMenuItems } from "@/routes/constants";
+import { getMenuIcon } from "@/routes/constants";
 import StaticLoadingPlaceholder from "@/components/common/StaticLoadingPlaceholder";
 import BreadcrumbHandler from "@/components/layouts/BreadcrumbHandler";
 import { getBaseStyles } from "@/styles/layoutStyles";
@@ -15,8 +15,28 @@ import { getMenuStyles, getSiderScrollStyles } from "@/styles/menuStyles";
 import { isDarkMode } from "@/styles/themeUtils";
 import { useRouter, usePathname } from "next/navigation";
 import { isExternal, resolvePath } from "@/routes/router-utils";
+import { useAuth } from "@/context/AuthContext";
 
 const { Header, Content, Sider } = Layout;
+
+// 定义后端返回的菜单项类型
+interface MenuItemType {
+  id: number;
+  name: string;
+  path?: string;
+  icon?: string;
+  parentId?: number | null;
+  children?: MenuItemType[];
+  hidden?: boolean;
+}
+
+// 定义Ant Design Menu组件使用的菜单项类型
+interface AntMenuItemType {
+  key: string;
+  icon?: React.ReactNode;
+  label: string;
+  children?: AntMenuItemType[];
+}
 
 const CustomLayout: React.FC<LayoutProps> = ({
   children,
@@ -28,10 +48,75 @@ const CustomLayout: React.FC<LayoutProps> = ({
   const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+  const { menus } = useAuth(); // 使用useAuth获取后端返回的菜单数据
+  const [menuItems, setMenuItems] = useState<AntMenuItemType[]>([]);
 
+  // 组件挂载时初始化
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // 从后端菜单数据生成菜单项
+  const generateMenuItems = (items: MenuItemType[]): AntMenuItemType[] => {
+    console.log('[CustomLayout] 生成菜单项，菜单数据:', items);
+    
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      console.warn('[CustomLayout] 菜单数据为空或格式不正确');
+      return [];
+    }
+    
+    return items
+      .filter(item => !item.hidden) // 过滤掉隐藏的菜单项
+      .map(item => {
+        const hasChildren = item.children && item.children.length > 0;
+        
+        console.log(`[CustomLayout] 处理菜单项: ${item.name}, 路径: ${item.path || '未指定'}`);
+        
+        if (hasChildren) {
+          return {
+            key: item.path || `menu-${item.id}`,
+            icon: getMenuIcon(item.icon || ""),
+            label: item.name,
+            children: generateMenuItems(item.children),
+          };
+        }
+        
+        return {
+          key: item.path || `menu-${item.id}`,
+          icon: getMenuIcon(item.icon || ""),
+          label: item.name,
+        };
+      });
+  };
+
+  // 当后端返回的菜单数据改变时，重新生成菜单项
+  useEffect(() => {
+    const processMenuData = () => {
+      console.log('[CustomLayout] === 菜单数据更新 ===');
+      console.log('[CustomLayout] 菜单数据原始值:', menus);
+      
+      if (menus && Array.isArray(menus) && menus.length > 0) {
+        try {
+          // 将后端返回的菜单数据映射为菜单项
+          const items = generateMenuItems(menus as unknown as MenuItemType[]);
+          console.log('[CustomLayout] 生成的菜单项:', items);
+          setMenuItems(items);
+        } catch (error) {
+          console.error('[CustomLayout] 处理菜单数据时出错:', error);
+          console.warn('[CustomLayout] 使用空菜单');
+          setMenuItems([]);
+        }
+      } else {
+        console.warn('[CustomLayout] 警告: 无菜单数据或格式不正确');
+        console.log('[CustomLayout] menus类型:', typeof menus);
+        console.log('[CustomLayout] 是否为数组:', Array.isArray(menus));
+        console.log('[CustomLayout] 数组长度:', Array.isArray(menus) ? menus.length : '非数组');
+        setMenuItems([]);
+      }
+    };
+    
+    processMenuData();
+  }, [menus]);
 
   // 处理菜单点击
   const handleMenuClick = ({ key }: { key: string }) => {
@@ -182,7 +267,7 @@ const CustomLayout: React.FC<LayoutProps> = ({
             <Menu
               mode="inline"
               selectedKeys={[pathname || '/']}
-              items={defaultMenuItems}
+              items={menuItems}
               onClick={handleMenuClick}
               style={{
                 borderLeft: "none",

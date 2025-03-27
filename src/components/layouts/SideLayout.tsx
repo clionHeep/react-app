@@ -7,7 +7,8 @@ import type { LayoutProps } from "@/types";
 import Logo from "@/components/common/Logo";
 import UserInfo from "@/components/user/UserInfo";
 import FullscreenButton from "@/components/common/FullscreenButton";
-import { defaultMenuItems } from "@/routes/constants";
+import { useAuth } from '@/context/AuthContext';
+import { getMenuIcon } from '@/routes/constants';
 import StaticLoadingPlaceholder from "@/components/common/StaticLoadingPlaceholder";
 import BreadcrumbHandler from "@/components/layouts/BreadcrumbHandler";
 import { getBaseStyles } from "@/styles/layoutStyles";
@@ -17,6 +18,24 @@ import { useRouter, usePathname } from "next/navigation";
 import { isExternal, resolvePath } from "@/routes/router-utils";
 
 const { Header, Content, Sider } = Layout;
+
+interface MenuItemType {
+  id: number;
+  name: string;
+  path?: string;
+  icon?: string;
+  parentId?: number | null;
+  children?: MenuItemType[];
+  hidden?: boolean;
+}
+
+// 定义Ant Design Menu组件使用的菜单项类型
+interface AntMenuItemType {
+  key: string;
+  icon?: React.ReactNode;
+  label: string;
+  children?: AntMenuItemType[];
+}
 
 const SideLayout: React.FC<LayoutProps> = ({
   children,
@@ -28,44 +47,92 @@ const SideLayout: React.FC<LayoutProps> = ({
   const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+  const { menus } = useAuth();
+  const [menuItems, setMenuItems] = useState<AntMenuItemType[]>([]);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // 处理菜单点击
   const handleMenuClick = ({ key }: { key: string }) => {
-    // 外部链接，使用window.open打开
     if (isExternal(key)) {
       window.open(key, '_blank');
       return;
     }
     
-    // 内部路径，使用Next.js 15 App Router导航
     const result = resolvePath(key);
     
     if (typeof result === 'string') {
-      // Next.js 15优化：使用router.push进行导航，默认支持无需刷新的客户端导航
       router.push(result, { scroll: true });
     } else {
-      // 使用对象形式传递查询参数 (Next.js 15支持)
       const { path, query } = result;
       
-      // 构建查询字符串
       const queryString = new URLSearchParams(query).toString();
       const url = queryString ? `${path}?${queryString}` : path;
       
-      // 带滚动行为的导航
       router.push(url, { scroll: true });
     }
   };
 
-  // 如果未挂载，显示静态加载占位符
+  const generateMenuItems = (menuItems: MenuItemType[]) => {
+    console.log('[SideLayout] 生成菜单项，菜单数据:', menuItems);
+    
+    if (!menuItems || !Array.isArray(menuItems) || menuItems.length === 0) {
+      console.warn('[SideLayout] 菜单数据为空或格式不正确');
+      return [];
+    }
+    
+    return menuItems
+      .filter(item => !item.hidden)
+      .map(item => {
+        const hasChildren = item.children && item.children.length > 0;
+        
+        console.log(`[SideLayout] 处理菜单项: ${item.name}, 路径: ${item.path || '未指定'}`);
+        
+        if (hasChildren) {
+          return {
+            key: item.path || `menu-${item.id}`,
+            icon: getMenuIcon(item.icon || ""),
+            label: item.name,
+            children: generateMenuItems(item.children),
+          };
+        }
+        
+        return {
+          key: item.path || `menu-${item.id}`,
+          icon: getMenuIcon(item.icon || ""),
+          label: item.name,
+        };
+      });
+  };
+
+  useEffect(() => {
+    console.log('[SideLayout] === 菜单数据更新 ===');
+    console.log('[SideLayout] 菜单数据原始值:', menus);
+    
+    if (menus && Array.isArray(menus) && menus.length > 0) {
+      try {
+        const items = generateMenuItems(menus as unknown as MenuItemType[]);
+        console.log('[SideLayout] 生成的菜单项:', items);
+        setMenuItems(items);
+      } catch (error) {
+        console.error('[SideLayout] 处理菜单数据时出错:', error);
+        console.warn('[SideLayout] 使用空菜单');
+        setMenuItems([]);
+      }
+    } else {
+      console.warn('[SideLayout] 警告: 无菜单数据或格式不正确');
+      console.log('[SideLayout] menus类型:', typeof menus);
+      console.log('[SideLayout] 是否为数组:', Array.isArray(menus));
+      console.log('[SideLayout] 数组长度:', Array.isArray(menus) ? menus.length : '非数组');
+      setMenuItems([]);
+    }
+  }, [menus]);
+
   if (!mounted) {
     return <StaticLoadingPlaceholder />;
   }
 
-  // 获取基础样式
   const styles = getBaseStyles(token);
 
   return (
@@ -121,7 +188,7 @@ const SideLayout: React.FC<LayoutProps> = ({
           <Menu
             mode="inline"
             selectedKeys={[pathname || '/']}
-            items={defaultMenuItems}
+            items={menuItems}
             onClick={handleMenuClick}
             style={{
               borderRight: "none",
@@ -155,7 +222,6 @@ const SideLayout: React.FC<LayoutProps> = ({
           </div>
         </Header>
 
-        {/* 基于历史导航的面包屑 */}
         <div
           style={{
             ...styles.breadcrumb,
@@ -169,7 +235,7 @@ const SideLayout: React.FC<LayoutProps> = ({
         <Layout
           style={{
             padding: "0 24px 24px",
-            marginTop: 20, // 固定间距
+            marginTop: 20,
           }}
         >
           <Content
@@ -179,7 +245,6 @@ const SideLayout: React.FC<LayoutProps> = ({
               borderRadius: 8,
               minHeight: "calc(100vh - 184px)",
               fontSize: 14,
-              // 增加深色模式下的阴影和边框以提高可见度
               boxShadow: isDarkMode(token)
                 ? "0 4px 16px rgba(0,0,0,0.5), 0 1px 4px rgba(255,255,255,0.05)"
                 : "none",

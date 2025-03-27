@@ -14,7 +14,8 @@
       "@/routes/*": ["src/routes/*"],
       "@/db": ["src/db"],
       "@/db/*": ["src/db/*"],
-      "@/lib/*": ["src/lib/*"]
+      "@/lib/*": ["src/lib/*"],
+      "@/store/*": ["src/store/*"]
     },
     "target": "ES2017",
     "lib": [

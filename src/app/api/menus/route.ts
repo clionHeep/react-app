@@ -10,7 +10,7 @@ export async function GET() {
       orderBy: { sort: 'asc' },
       include: {
         children: true,
-        permissions: true
+        menuPermissions: true
       }
     });
 
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
         parent: data.parentId ? {
           connect: { id: data.parentId }
         } : undefined,
-        permissions: data.permissionId ? {
+        menuPermissions: data.permissionId ? {
           connect: [{ id: data.permissionId }]
         } : undefined
       }

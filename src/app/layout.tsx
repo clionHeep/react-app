@@ -14,6 +14,8 @@ import { BreadcrumbProvider } from "@/context/BreadcrumbContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { MessageProvider } from '@/providers/MessageProvider';
 import ReduxProvider from "@/hooks/redux/ReduxProvider";
+import { RouterProvider } from '@/routes/AppRouter';
+import zhCN from 'antd/lib/locale/zh_CN';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -95,17 +97,20 @@ export default function RootLayout({
                   },
                 },
               }}
+              locale={zhCN}
             >
               <MessageProvider>
                 <BreadcrumbProvider>
                   <AuthProvider>
-                    {isLoginPage ? (
-                      children
-                    ) : (
-                      <AuthGuard>
-                        <MainLayout>{children}</MainLayout>
-                      </AuthGuard>
-                    )}
+                    <RouterProvider>
+                      {isLoginPage ? (
+                        children
+                      ) : (
+                        <AuthGuard>
+                          <MainLayout>{children}</MainLayout>
+                        </AuthGuard>
+                      )}
+                    </RouterProvider>
                   </AuthProvider>
                 </BreadcrumbProvider>
               </MessageProvider>

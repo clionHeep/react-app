@@ -4,11 +4,13 @@ import { InternalAxiosRequestConfig } from 'axios';
 export interface Menu {
   id: number;
   name: string;
-  path: string;
+  path?: string;
   icon?: string;
-  parentId?: number;
+  component?: string;
   sort?: number;
+  parentId?: number | null;
   hidden?: boolean;
+  children?: Menu[];
 }
 
 export interface Permission {
