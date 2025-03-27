@@ -3,13 +3,13 @@ import { db } from '@/db';
 import { verifyAdmin } from '@/utils/auth-utils';
 
 // 获取单个菜单
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest) {
   try {
-    const id = parseInt(params.id);
-    
+    // 从URL路径中提取ID
+    const pathParts = request.nextUrl.pathname.split('/');
+    const idStr = pathParts[pathParts.length - 1];
+    const id = parseInt(idStr);
+
     if (isNaN(id)) {
       return NextResponse.json({
         success: false,
@@ -47,10 +47,7 @@ export async function GET(
 }
 
 // 更新菜单
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: NextRequest) {
   try {
     // 验证管理员权限
     const auth = await verifyAdmin(request);
@@ -61,8 +58,11 @@ export async function PUT(
       }, { status: auth.status });
     }
 
-    const id = parseInt(params.id);
-    
+    // 从URL路径中提取ID
+    const pathParts = request.nextUrl.pathname.split('/');
+    const idStr = pathParts[pathParts.length - 1];
+    const id = parseInt(idStr);
+
     if (isNaN(id)) {
       return NextResponse.json({
         success: false,
@@ -84,7 +84,7 @@ export async function PUT(
 
     // 解析请求体
     const data = await request.json();
-    
+
     // 验证必填字段
     if (!data.name || !data.path) {
       return NextResponse.json({
@@ -127,10 +127,7 @@ export async function PUT(
 }
 
 // 删除菜单
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: NextRequest) {
   try {
     // 验证管理员权限
     const auth = await verifyAdmin(request);
@@ -141,8 +138,11 @@ export async function DELETE(
       }, { status: auth.status });
     }
 
-    const id = parseInt(params.id);
-    
+    // 从URL路径中提取ID
+    const pathParts = request.nextUrl.pathname.split('/');
+    const idStr = pathParts[pathParts.length - 1];
+    const id = parseInt(idStr);
+
     if (isNaN(id)) {
       return NextResponse.json({
         success: false,

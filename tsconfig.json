@@ -24,6 +24,7 @@
     ],
     "allowJs": true,
     "skipLibCheck": true,
+    "strictNullChecks": false,
     "strict": false,
     "noEmit": true,
     "incremental": true,

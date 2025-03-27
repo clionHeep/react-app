@@ -5,28 +5,16 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading, checkAuth } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    const verifyAuth = async () => {
-      // 如果已验证通过，无需重复检查
-      if (isAuthenticated) return;
-      
-      // 重新检查认证状态
-      const isAuthed = await checkAuth();
-      
-      // 如果未认证，重定向到登录页
-      if (!isAuthed) {
-        router.push(`/login?from=${encodeURIComponent(pathname || '')}`);
-      }
-    };
-
-    if (!isLoading) {
-      verifyAuth();
+    // 如果未认证且不在加载中，重定向到登录页
+    if (!isLoading && !isAuthenticated) {
+      router.push(`/login?from=${encodeURIComponent(pathname || '')}`);
     }
-  }, [isAuthenticated, isLoading, checkAuth, router, pathname]);
+  }, [isAuthenticated, isLoading, router, pathname]);
 
   // 如果正在加载，显示加载状态
   if (isLoading) {

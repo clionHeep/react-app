@@ -2,16 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
 import { verifyAdmin } from '@/utils/auth-utils';
 
-interface Params {
-  params: {
-    id: string;
-  };
-}
-
 // 获取单个角色
-export async function GET({ params }: Params) {
+export async function GET(request: NextRequest) {
   try {
-    const id = parseInt(params.id);
+    // 从URL路径中提取ID
+    const pathParts = request.nextUrl.pathname.split('/');
+    const idStr = pathParts[pathParts.length - 1];
+    const id = parseInt(idStr);
     
     if (isNaN(id)) {
       return NextResponse.json({
@@ -67,7 +64,7 @@ export async function GET({ params }: Params) {
 }
 
 // 更新角色
-export async function PUT(request: NextRequest, { params }: Params) {
+export async function PUT(request: NextRequest) {
   try {
     // 验证管理员权限
     const auth = await verifyAdmin(request);
@@ -78,7 +75,10 @@ export async function PUT(request: NextRequest, { params }: Params) {
       }, { status: auth.status });
     }
 
-    const id = parseInt(params.id);
+    // 从URL路径中提取ID
+    const pathParts = request.nextUrl.pathname.split('/');
+    const idStr = pathParts[pathParts.length - 1];
+    const id = parseInt(idStr);
     
     if (isNaN(id)) {
       return NextResponse.json({
@@ -198,7 +198,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
 }
 
 // 删除角色
-export async function DELETE(request: NextRequest, { params }: Params) {
+export async function DELETE(request: NextRequest) {
   try {
     // 验证管理员权限
     const auth = await verifyAdmin(request);
@@ -209,7 +209,10 @@ export async function DELETE(request: NextRequest, { params }: Params) {
       }, { status: auth.status });
     }
 
-    const id = parseInt(params.id);
+    // 从URL路径中提取ID
+    const pathParts = request.nextUrl.pathname.split('/');
+    const idStr = pathParts[pathParts.length - 1];
+    const id = parseInt(idStr);
     
     if (isNaN(id)) {
       return NextResponse.json({

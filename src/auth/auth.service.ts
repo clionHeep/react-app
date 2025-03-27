@@ -479,6 +479,13 @@ export class AuthService {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
+    // 从otherData中移除roles
+    const { roles, ...cleanedData } = otherData;
+    
+    // 处理roles字段
+    const rolesValue = Array.isArray(roles) ? roles.join(',') : 
+                      typeof roles === 'string' ? roles : '';
+
     // 创建用户
     const user = await this.prisma.user.create({
       data: {
@@ -490,8 +497,8 @@ export class AuthService {
         status: 'ACTIVE',
         createdAt: new Date(),
         updatedAt: new Date(),
-        roles: Array.isArray(otherData.roles) ? otherData.roles.join(',') : otherData.roles || undefined,
-        ...otherData
+        roles: rolesValue,
+        ...cleanedData
       }
     });
 

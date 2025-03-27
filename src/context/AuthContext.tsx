@@ -82,6 +82,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setPermissions([]);
         setRoles([]);
       }
+      
+      // 无论有没有token，都设置加载完成
+      setIsLoading(false);
     };
 
     // 初始化认证状态
@@ -141,7 +144,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   if (isLoading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <Spin size="large" tip="正在加载..." />
+        <Spin size="large">
+          <div style={{ padding: '30px', textAlign: 'center' }}>
+            <div>正在加载...</div>
+          </div>
+        </Spin>
       </div>
     );
   }

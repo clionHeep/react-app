@@ -2,16 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
 import { verifyAdmin } from '@/utils/auth-utils';
 
-interface Params {
-  params: {
-    id: string;
-  };
-}
-
 // 获取角色关联的权限
-export async function GET(request: NextRequest, { params }: Params) {
+export async function GET(request: NextRequest) {
   try {
-    const roleId = parseInt(params.id);
+    // 从URL中提取ID
+    const id = request.url.split('/').pop();
+    if (!id) {
+      return NextResponse.json({
+        success: false,
+        message: '未提供角色ID'
+      }, { status: 400 });
+    }
+    
+    const roleId = parseInt(id);
     
     if (isNaN(roleId)) {
       return NextResponse.json({
@@ -49,7 +52,7 @@ export async function GET(request: NextRequest, { params }: Params) {
 }
 
 // 更新角色关联的权限
-export async function PUT(request: NextRequest, { params }: Params) {
+export async function PUT(request: NextRequest) {
   try {
     // 验证管理员权限
     const auth = await verifyAdmin(request);
@@ -60,7 +63,16 @@ export async function PUT(request: NextRequest, { params }: Params) {
       }, { status: auth.status });
     }
 
-    const roleId = parseInt(params.id);
+    // 从URL中提取ID
+    const id = request.url.split('/').pop();
+    if (!id) {
+      return NextResponse.json({
+        success: false,
+        message: '未提供角色ID'
+      }, { status: 400 });
+    }
+    
+    const roleId = parseInt(id);
     
     if (isNaN(roleId)) {
       return NextResponse.json({

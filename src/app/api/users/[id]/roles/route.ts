@@ -2,16 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
 import { verifyAdmin } from '@/utils/auth-utils';
 
-interface Params {
-  params: {
-    id: string;
-  };
-}
-
 // 获取用户关联的角色
-export async function GET(request: NextRequest, { params }: Params) {
+export async function GET(request: NextRequest) {
   try {
-    const userId = parseInt(params.id);
+    // 从URL中提取ID
+    const id = request.url.split('/').pop();
+    if (!id) {
+      return NextResponse.json({
+        success: false,
+        message: '未提供用户ID'
+      }, { status: 400 });
+    }
+    
+    const userId = parseInt(id);
     
     if (isNaN(userId)) {
       return NextResponse.json({
@@ -56,7 +59,7 @@ export async function GET(request: NextRequest, { params }: Params) {
 }
 
 // 更新用户关联的角色
-export async function PUT(request: NextRequest, { params }: Params) {
+export async function PUT(request: NextRequest) {
   try {
     // 验证管理员权限
     const auth = await verifyAdmin(request);
@@ -67,7 +70,16 @@ export async function PUT(request: NextRequest, { params }: Params) {
       }, { status: auth.status });
     }
 
-    const userId = parseInt(params.id);
+    // 从URL中提取ID
+    const id = request.url.split('/').pop();
+    if (!id) {
+      return NextResponse.json({
+        success: false,
+        message: '未提供用户ID'
+      }, { status: 400 });
+    }
+    
+    const userId = parseInt(id);
     
     if (isNaN(userId)) {
       return NextResponse.json({
