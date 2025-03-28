@@ -82,7 +82,7 @@ const CustomLayout: React.FC<LayoutProps> = ({
         
         if (hasChildren) {
           return {
-            key: item.path || `menu-${item.id}`,
+            key: item.id ? `menu-${item.id}` : item.path,
             icon: getIconComponent(item.icon || ""),
             label: item.name,
             children: generateMenuItems(item.children),
@@ -90,12 +90,12 @@ const CustomLayout: React.FC<LayoutProps> = ({
         }
         
         return {
-          key: item.path || `menu-${item.id}`,
+          key: item.id ? `menu-${item.id}` : item.path,
           icon: getIconComponent(item.icon || ""),
           label: item.name,
         };
       });
-  }, []); // 递归函数依赖自身，但React不会处理这种循环依赖
+  }, []);
 
   // 当后端返回的菜单数据改变时，重新生成菜单项
   useEffect(() => {

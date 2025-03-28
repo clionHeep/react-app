@@ -225,20 +225,15 @@ export const generateMenuItems = (
 
     if (hasChildren) {
       return {
-        key: `menu-${item.id}-${item.path}`,
+        key: item.path,
         icon: getIconComponent(item.icon || ""),
         label: item.name,
         children: generateMenuItems(item.children || []),
       };
     }
 
-    // 如果是系统管理页面的子菜单，使用完整的路径
-    const key = item.path === '/system' && item.parentId ? 
-      `menu-${item.id}-${item.parentId}-${item.path}` : 
-      `menu-${item.id}-${item.path}`;
-
     return {
-      key,
+      key: item.path,
       icon: getIconComponent(item.icon || ""),
       label: item.name,
     };
