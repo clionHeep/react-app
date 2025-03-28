@@ -81,6 +81,7 @@ const RouteRenderer: React.FC = () => {
   const [Component, setComponent] = useState<React.ComponentType<{ [key: string]: unknown }> | null>(null);
   const { menus, isLoading } = useAuth();
   const [dynamicRoutes, setDynamicRoutes] = useState<Record<string, React.ComponentType<{ [key: string]: unknown }>>>({});
+  const router = useRouter();
 
   // 根据后端菜单数据构建动态路由
   useEffect(() => {
@@ -110,8 +111,8 @@ const RouteRenderer: React.FC = () => {
     setDynamicRoutes(routes);
   }, [menus]);
 
-  // 根据路径找到匹配的组件
-  const findComponentForPath = (path: string): React.ComponentType<{ [key: string]: unknown }> | null => {
+  // 根据路径找到匹配的组件，使用useCallback包装
+  const findComponentForPath = React.useCallback((path: string): React.ComponentType<{ [key: string]: unknown }> | null => {
     console.log('查找路径对应的组件:', path);
     
     // 1. 先检查核心组件
@@ -161,12 +162,12 @@ const RouteRenderer: React.FC = () => {
     
     // 5. 所有情况都不匹配，返回404组件
     return CoreComponentMap['/404'];
-  };
+  }, [dynamicRoutes, menus]);
 
   useEffect(() => {
     const component = findComponentForPath(currentPath);
     setComponent(() => component);
-  }, [currentPath, dynamicRoutes]);
+  }, [currentPath, dynamicRoutes, findComponentForPath]);
 
   // 如果正在加载，显示加载状态
   if (isLoading) {
@@ -175,7 +176,8 @@ const RouteRenderer: React.FC = () => {
 
   // 如果没有找到组件，显示404页面
   if (!Component) {
-    return <DefaultPage title="页面不存在 (404)" />;
+    router.push('/not-found');
+    return null;
   }
 
   return (

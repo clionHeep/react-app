@@ -1,5 +1,11 @@
 import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcrypt';
 const prisma = new PrismaClient();
+
+// 密码加密辅助函数
+async function hashPassword(password) {
+  return bcrypt.hash(password, 10);
+}
 
 async function main() {
   console.log('开始填充数据库初始数据...');
@@ -55,7 +61,8 @@ async function main() {
     create: {
       name: 'admin',
       description: '系统管理员',
-      isSystem: true
+      isSystem: true,
+      status: 1
     }
   });
 
@@ -65,31 +72,15 @@ async function main() {
     create: {
       name: 'user',
       description: '普通用户',
-      isSystem: true
+      isSystem: true,
+      status: 1
     }
   });
 
   console.log('已创建角色:', { adminRole, userRole });
 
-  // 2. 创建基础权限 - 使用三段式格式 module:resource:action
-  const permissions = await Promise.all([
-    // 仪表盘权限
-    prisma.permission.upsert({
-      where: { code: 'dashboard:index:view' },
-      update: {},
-      create: { code: 'dashboard:index:view', name: '查看仪表盘' }
-    }),
-    prisma.permission.upsert({
-      where: { code: 'dashboard:analytics:view' },
-      update: {},
-      create: { code: 'dashboard:analytics:view', name: '查看分析数据' }
-    }),
-    prisma.permission.upsert({
-      where: { code: 'dashboard:workspace:view' },
-      update: {},
-      create: { code: 'dashboard:workspace:view', name: '查看工作区' }
-    }),
-    
+  // 2. 创建系统管理相关权限
+  const systemPermissions = await Promise.all([
     // 系统管理权限
     prisma.permission.upsert({
       where: { code: 'system:index:view' },
@@ -151,18 +142,6 @@ async function main() {
       create: { code: 'system:roles:delete', name: '删除角色' }
     }),
     
-    // 权限管理权限
-    prisma.permission.upsert({
-      where: { code: 'system:permissions:manage' },
-      update: {},
-      create: { code: 'system:permissions:manage', name: '权限管理' }
-    }),
-    prisma.permission.upsert({
-      where: { code: 'system:permissions:view' },
-      update: {},
-      create: { code: 'system:permissions:view', name: '查看权限' }
-    }),
-    
     // 菜单管理权限
     prisma.permission.upsert({
       where: { code: 'system:menus:manage' },
@@ -174,55 +153,28 @@ async function main() {
       update: {},
       create: { code: 'system:menus:view', name: '查看菜单' }
     }),
-    
-    // 设置权限
     prisma.permission.upsert({
-      where: { code: 'settings:index:view' },
+      where: { code: 'system:menus:add' },
       update: {},
-      create: { code: 'settings:index:view', name: '查看设置' }
+      create: { code: 'system:menus:add', name: '添加菜单' }
     }),
-    
-    // 电子商务权限
     prisma.permission.upsert({
-      where: { code: 'e-commerce:index:view' },
+      where: { code: 'system:menus:edit' },
       update: {},
-      create: { code: 'e-commerce:index:view', name: '查看电子商务' }
+      create: { code: 'system:menus:edit', name: '编辑菜单' }
     }),
-    
-    // 开发工具权限
     prisma.permission.upsert({
-      where: { code: 'dev-tools:index:view' },
+      where: { code: 'system:menus:delete' },
       update: {},
-      create: { code: 'dev-tools:index:view', name: '查看开发工具' }
-    }),
-    
-    // 内容管理权限
-    prisma.permission.upsert({
-      where: { code: 'content:index:view' },
-      update: {},
-      create: { code: 'content:index:view', name: '查看内容管理' }
-    }),
-    
-    // 应用权限
-    prisma.permission.upsert({
-      where: { code: 'apps:index:view' },
-      update: {},
-      create: { code: 'apps:index:view', name: '查看应用' }
-    }),
-    
-    // 关于页面权限
-    prisma.permission.upsert({
-      where: { code: 'about:index:view' },
-      update: {},
-      create: { code: 'about:index:view', name: '查看关于页面' }
+      create: { code: 'system:menus:delete', name: '删除菜单' }
     })
   ]);
 
-  console.log(`已创建 ${permissions.length} 个权限`);
+  console.log(`已创建 ${systemPermissions.length} 个系统管理权限`);
 
   // 3. 为管理员角色分配所有权限
   const adminPermissions = await Promise.all(
-    permissions.map(permission => 
+    systemPermissions.map(permission => 
       prisma.rolepermission.create({
         data: {
           roleId: adminRole.id,
@@ -234,220 +186,155 @@ async function main() {
 
   console.log(`已为管理员角色分配 ${adminPermissions.length} 个权限`);
 
-  // 4. 创建基础菜单 - 基于src/app目录结构
-  const dashboardMenu = await prisma.menu.create({
-    data: {
-      name: '仪表盘',
-      path: '/dashboard',
-      icon: 'DashboardOutlined',
-      sort: 1,
-      component: 'Dashboard'
-    }
-  });
-
-  // 仪表板子菜单
-  const analyticsMenu = await prisma.menu.create({
-    data: {
-      name: '数据分析',
-      path: '/dashboard/analytics',
-      icon: 'BarChartOutlined',
-      sort: 1,
-      component: 'DashboardAnalytics',
-      parentId: dashboardMenu.id
-    }
-  });
-
-  const workspaceMenu = await prisma.menu.create({
-    data: {
-      name: '工作区',
-      path: '/dashboard/workspace',
-      icon: 'AppstoreOutlined',
-      sort: 2,
-      component: 'DashboardWorkspace',
-      parentId: dashboardMenu.id
-    }
-  });
-
+  // 4. 创建系统管理菜单
   const systemMenu = await prisma.menu.create({
     data: {
       name: '系统管理',
       path: '/system',
       icon: 'SettingOutlined',
-      sort: 2,
-      component: 'System'
+      sort: 1,
+      component: 'System',
+      status: 1
     }
   });
 
+  // 创建系统管理子菜单
   const usersMenu = await prisma.menu.create({
     data: {
       name: '用户管理',
-      path: '/users',
+      path: '/system/users',
       icon: 'UserOutlined',
+      sort: 1,
+      component: 'SystemUsers',
+      parentId: systemMenu.id,
+      status: 1
+    }
+  });
+
+  const rolesMenu = await prisma.menu.create({
+    data: {
+      name: '角色管理',
+      path: '/system/roles',
+      icon: 'TeamOutlined',
+      sort: 2,
+      component: 'SystemRoles',
+      parentId: systemMenu.id,
+      status: 1
+    }
+  });
+
+  const menusMenu = await prisma.menu.create({
+    data: {
+      name: '菜单管理',
+      path: '/system/menus',
+      icon: 'MenuOutlined',
       sort: 3,
-      component: 'Users'
+      component: 'SystemMenus',
+      parentId: systemMenu.id,
+      status: 1
     }
   });
 
-  const settingsMenu = await prisma.menu.create({
-    data: {
-      name: '设置',
-      path: '/settings',
-      icon: 'ToolOutlined',
-      sort: 4,
-      component: 'Settings'
-    }
-  });
-
-  const ecommerceMenu = await prisma.menu.create({
-    data: {
-      name: '电子商务',
-      path: '/e-commerce',
-      icon: 'ShoppingCartOutlined',
-      sort: 5,
-      component: 'ECommerce'
-    }
-  });
-
-  const devToolsMenu = await prisma.menu.create({
-    data: {
-      name: '开发工具',
-      path: '/dev-tools',
-      icon: 'CodeOutlined',
-      sort: 6,
-      component: 'DevTools'
-    }
-  });
-
-  const contentMenu = await prisma.menu.create({
-    data: {
-      name: '内容管理',
-      path: '/content',
-      icon: 'FileTextOutlined',
-      sort: 7,
-      component: 'Content'
-    }
-  });
-
-  const appsMenu = await prisma.menu.create({
-    data: {
-      name: '应用',
-      path: '/apps',
-      icon: 'AppstoreAddOutlined',
-      sort: 8,
-      component: 'Apps'
-    }
-  });
-
-  const aboutMenu = await prisma.menu.create({
-    data: {
-      name: '关于',
-      path: '/about',
-      icon: 'InfoCircleOutlined',
-      sort: 9,
-      component: 'About'
-    }
-  });
-
-  console.log('已创建基础菜单');
+  console.log('已创建系统管理菜单');
 
   // 5. 添加菜单权限关联
   const menuPermissions = await Promise.all([
-    // 仪表盘菜单权限
-    prisma.menuPermission.create({
-      data: {
-        menuId: dashboardMenu.id,
-        permissionId: permissions.find(p => p.code === 'dashboard:index:view').id,
-        actionType: 'view'
-      }
-    }),
-
-    // 分析子菜单权限
-    prisma.menuPermission.create({
-      data: {
-        menuId: analyticsMenu.id,
-        permissionId: permissions.find(p => p.code === 'dashboard:analytics:view').id,
-        actionType: 'view'
-      }
-    }),
-
-    // 工作区子菜单权限
-    prisma.menuPermission.create({
-      data: {
-        menuId: workspaceMenu.id,
-        permissionId: permissions.find(p => p.code === 'dashboard:workspace:view').id,
-        actionType: 'view'
-      }
-    }),
-
-    // 系统菜单权限
+    // 系统管理菜单权限
     prisma.menuPermission.create({
       data: {
         menuId: systemMenu.id,
-        permissionId: permissions.find(p => p.code === 'system:index:view').id,
+        permissionId: systemPermissions.find(p => p.code === 'system:index:view').id,
         actionType: 'view'
       }
     }),
 
-    // 用户菜单权限
+    // 用户管理菜单权限
     prisma.menuPermission.create({
       data: {
         menuId: usersMenu.id,
-        permissionId: permissions.find(p => p.code === 'system:users:view').id,
+        permissionId: systemPermissions.find(p => p.code === 'system:users:view').id,
         actionType: 'view'
       }
     }),
-
-    // 设置菜单权限
     prisma.menuPermission.create({
       data: {
-        menuId: settingsMenu.id,
-        permissionId: permissions.find(p => p.code === 'settings:index:view').id,
-        actionType: 'view'
+        menuId: usersMenu.id,
+        permissionId: systemPermissions.find(p => p.code === 'system:users:add').id,
+        actionType: 'add'
+      }
+    }),
+    prisma.menuPermission.create({
+      data: {
+        menuId: usersMenu.id,
+        permissionId: systemPermissions.find(p => p.code === 'system:users:edit').id,
+        actionType: 'edit'
+      }
+    }),
+    prisma.menuPermission.create({
+      data: {
+        menuId: usersMenu.id,
+        permissionId: systemPermissions.find(p => p.code === 'system:users:delete').id,
+        actionType: 'delete'
       }
     }),
 
-    // 电子商务菜单权限
+    // 角色管理菜单权限
     prisma.menuPermission.create({
       data: {
-        menuId: ecommerceMenu.id,
-        permissionId: permissions.find(p => p.code === 'e-commerce:index:view').id,
+        menuId: rolesMenu.id,
+        permissionId: systemPermissions.find(p => p.code === 'system:roles:view').id,
         actionType: 'view'
       }
     }),
-
-    // 开发工具菜单权限
     prisma.menuPermission.create({
       data: {
-        menuId: devToolsMenu.id,
-        permissionId: permissions.find(p => p.code === 'dev-tools:index:view').id,
-        actionType: 'view'
+        menuId: rolesMenu.id,
+        permissionId: systemPermissions.find(p => p.code === 'system:roles:add').id,
+        actionType: 'add'
+      }
+    }),
+    prisma.menuPermission.create({
+      data: {
+        menuId: rolesMenu.id,
+        permissionId: systemPermissions.find(p => p.code === 'system:roles:edit').id,
+        actionType: 'edit'
+      }
+    }),
+    prisma.menuPermission.create({
+      data: {
+        menuId: rolesMenu.id,
+        permissionId: systemPermissions.find(p => p.code === 'system:roles:delete').id,
+        actionType: 'delete'
       }
     }),
 
-    // 内容管理菜单权限
+    // 菜单管理菜单权限
     prisma.menuPermission.create({
       data: {
-        menuId: contentMenu.id,
-        permissionId: permissions.find(p => p.code === 'content:index:view').id,
+        menuId: menusMenu.id,
+        permissionId: systemPermissions.find(p => p.code === 'system:menus:view').id,
         actionType: 'view'
       }
     }),
-
-    // 应用菜单权限
     prisma.menuPermission.create({
       data: {
-        menuId: appsMenu.id,
-        permissionId: permissions.find(p => p.code === 'apps:index:view').id,
-        actionType: 'view'
+        menuId: menusMenu.id,
+        permissionId: systemPermissions.find(p => p.code === 'system:menus:add').id,
+        actionType: 'add'
       }
     }),
-
-    // 关于菜单权限
     prisma.menuPermission.create({
       data: {
-        menuId: aboutMenu.id,
-        permissionId: permissions.find(p => p.code === 'about:index:view').id,
-        actionType: 'view'
+        menuId: menusMenu.id,
+        permissionId: systemPermissions.find(p => p.code === 'system:menus:edit').id,
+        actionType: 'edit'
+      }
+    }),
+    prisma.menuPermission.create({
+      data: {
+        menuId: menusMenu.id,
+        permissionId: systemPermissions.find(p => p.code === 'system:menus:delete').id,
+        actionType: 'delete'
       }
     })
   ]);
@@ -455,27 +342,51 @@ async function main() {
   console.log(`已创建 ${menuPermissions.length} 个菜单权限关联`);
 
   // 6. 创建管理员用户
+  const adminPassword = await hashPassword('admin123');
   const adminUser = await prisma.user.create({
     data: {
       username: 'admin',
-      password: '$2b$10$uVSg6DP1lLPNJB9o5NQ1wezgQRRY1.6UJjx6HGrYGcGLQwkUvHPla', // hash of 'admin123'
+      password: adminPassword,
       email: 'admin@example.com',
       name: '系统管理员',
       status: 'ACTIVE'
     }
   });
 
-  console.log('已创建管理员用户:', adminUser);
-
-  // 7. 将管理员用户关联到管理员角色
-  await prisma.userrole.create({
+  // 创建测试用户
+  const userPassword = await hashPassword('user123');
+  const testUser = await prisma.user.create({
     data: {
-      userId: adminUser.id,
-      roleId: adminRole.id
+      username: 'user',
+      password: userPassword,
+      email: 'user@example.com',
+      name: '测试用户',
+      status: 'ACTIVE'
     }
   });
 
-  console.log('已关联管理员用户和角色');
+  console.log('已创建管理员用户:', adminUser);
+  console.log('已创建测试用户:', testUser);
+
+  // 7. 关联用户和角色
+  await Promise.all([
+    // 管理员用户关联管理员角色
+    prisma.userrole.create({
+      data: {
+        userId: adminUser.id,
+        roleId: adminRole.id
+      }
+    }),
+    // 测试用户关联普通用户角色
+    prisma.userrole.create({
+      data: {
+        userId: testUser.id,
+        roleId: userRole.id
+      }
+    })
+  ]);
+
+  console.log('已关联用户和角色');
   console.log('数据填充完成！');
 }
 

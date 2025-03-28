@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import dynamic from "next/dynamic";
@@ -18,6 +18,25 @@ export default function ProtectedRoute({
   const pathname = usePathname();
   const hasRedirected = useRef(false);
   const [shouldRender, setShouldRender] = useState(false);
+
+  // 处理未认证状态的函数，使用useCallback包装以避免依赖循环
+  const handleUnauthenticated = useCallback(() => {
+    // 避免频繁重定向
+    if (hasRedirected.current) {
+      return;
+    }
+
+    console.log("ProtectedRoute: 用户未认证，准备重定向到登录页");
+    hasRedirected.current = true;
+
+    // 检查当前是否已经在登录页
+    if (!pathname.includes("/login")) {
+      // 使用replace而不是push，防止历史堆栈问题
+      router.replace(`/login?from=${encodeURIComponent(pathname || "")}`);
+    }
+
+    setShouldRender(false);
+  }, [pathname, router]);
 
   useEffect(() => {
     // 如果已认证，可以直接渲染
@@ -54,26 +73,7 @@ export default function ProtectedRoute({
     if (!hasToken && !isAuthenticated) {
       handleUnauthenticated();
     }
-  }, [isAuthenticated, isLoading, pathname]);
-
-  // 处理未认证状态的函数
-  const handleUnauthenticated = () => {
-    // 避免频繁重定向
-    if (hasRedirected.current) {
-      return;
-    }
-
-    console.log("ProtectedRoute: 用户未认证，准备重定向到登录页");
-    hasRedirected.current = true;
-
-    // 检查当前是否已经在登录页
-    if (!pathname.includes("/login")) {
-      // 使用replace而不是push，防止历史堆栈问题
-      router.replace(`/login?from=${encodeURIComponent(pathname || "")}`);
-    }
-
-    setShouldRender(false);
-  };
+  }, [isAuthenticated, isLoading, pathname, handleUnauthenticated]);
 
   // 如果正在加载，使用全局Loading组件
   if (isLoading) {

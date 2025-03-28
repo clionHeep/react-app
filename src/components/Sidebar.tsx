@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Layout, Menu, MenuProps } from 'antd';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -50,8 +50,8 @@ const Sidebar: React.FC<SidebarProps> = ({
     setOpenKeys(newOpenKeys);
   }, [pathname]);
 
-  // 直接从菜单数据生成菜单项
-  const generateMenuItems = (menuItems: MenuItemType[]): MenuProps["items"] => {
+  // 直接从菜单数据生成菜单项 - 使用useCallback包装
+  const generateMenuItems = useCallback((menuItems: MenuItemType[]): MenuProps["items"] => {
     console.log('生成菜单项，菜单数据:', menuItems);
     
     if (!menuItems || !Array.isArray(menuItems) || menuItems.length === 0) {
@@ -81,7 +81,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           label: item.name,
         };
       });
-  };
+  }, []); // 递归函数没有额外依赖
 
   // 当后端返回的菜单数据改变时，重新生成菜单项
   useEffect(() => {
@@ -100,7 +100,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       console.log('数组长度:', Array.isArray(menus) ? menus.length : '非数组');
       setMenuItems([]);
     }
-  }, [menus]);
+  }, [menus, generateMenuItems]); // 添加generateMenuItems作为依赖
 
   // 处理菜单项点击
   const handleMenuClick = ({ key }: { key: string }) => {

@@ -7,7 +7,6 @@ import SideLayout from "./SideLayout";
 import MixLayout from "./MixLayout";
 import CustomLayout from "./CustomLayout";
 import LayoutPreview from "./preview/LayoutPreview";
-import { BreadcrumbProvider } from "@/context/BreadcrumbContext";
 import { LayoutType } from "@/types";
 
 const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -85,27 +84,25 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   };
 
   return (
-    <BreadcrumbProvider>
-      <Layout style={{ minHeight: "100vh" }}>
-        {renderLayout()}
-        {layoutPreviewOpen && (
-          <LayoutPreview
-            isOpen={layoutPreviewOpen}
-            onClose={handleLayoutPreviewClose}
-            onLayoutSelect={handleLayoutTypeChange}
-            currentLayout={layoutType}
-            currentThemeMode="light"
-            currentCustomColor="#1890ff"
-            onThemeModeChange={() => {
-              // 处理主题模式变更
-            }}
-            onCustomColorChange={() => {
-              // 处理自定义颜色变更
-            }}
-          />
-        )}
-      </Layout>
-    </BreadcrumbProvider>
+    <Layout style={{ minHeight: "100vh" }}>
+      {renderLayout()}
+      {layoutPreviewOpen && (
+        <LayoutPreview
+          isOpen={layoutPreviewOpen}
+          onClose={handleLayoutPreviewClose}
+          onLayoutSelect={handleLayoutTypeChange}
+          currentLayout={layoutType}
+          currentThemeMode="light"
+          currentCustomColor="#1890ff"
+          onThemeModeChange={() => {
+            // 处理主题模式变更
+          }}
+          onCustomColorChange={() => {
+            // 处理自定义颜色变更
+          }}
+        />
+      )}
+    </Layout>
   );
 };
 

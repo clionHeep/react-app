@@ -1,55 +1,24 @@
 import React from "react";
 import { MenuProps } from "antd";
+import * as Icons from '@ant-design/icons';
+import type { AntdIconProps } from '@ant-design/icons/lib/components/AntdIcon';
 import {
   HomeOutlined,
   AppstoreOutlined,
   SettingOutlined,
   TeamOutlined,
-  ShopOutlined,
-  FileOutlined,
   AreaChartOutlined,
   DashboardOutlined,
-  CodeOutlined,
-  DatabaseOutlined,
-  MessageOutlined,
   QuestionCircleOutlined,
-  ShoppingOutlined,
-  OrderedListOutlined,
-  UserOutlined,
-  ApartmentOutlined,
-  LockOutlined,
-  MenuOutlined,
-  ToolOutlined,
   GlobalOutlined,
-  KeyOutlined,
-  ProfileOutlined,
+  MenuOutlined,
 } from "@ant-design/icons";
 
-// 图标映射表，用于匹配后端返回的图标字符串到实际组件
-const IconMapping: { [key: string]: React.ReactNode } = {
-  home: <HomeOutlined />,
-  dashboard: <DashboardOutlined />,
-  app: <AppstoreOutlined />,
-  setting: <SettingOutlined />,
-  user: <UserOutlined />,
-  team: <TeamOutlined />,
-  shop: <ShopOutlined />,
-  file: <FileOutlined />,
-  chart: <AreaChartOutlined />,
-  code: <CodeOutlined />,
-  database: <DatabaseOutlined />,
-  message: <MessageOutlined />,
-  question: <QuestionCircleOutlined />,
-  shopping: <ShoppingOutlined />,
-  list: <OrderedListOutlined />,
-  role: <ApartmentOutlined />,
-  permission: <LockOutlined />,
-  menu: <MenuOutlined />,
-  tool: <ToolOutlined />,
-  global: <GlobalOutlined />,
-  key: <KeyOutlined />,
-  profile: <ProfileOutlined />,
-  // 可以根据需要扩展更多图标
+// 获取图标组件
+const getIconComponent = (iconName: string) => {
+  if (!iconName) return null;
+  const IconComponent = (Icons as unknown as Record<string, React.ComponentType<AntdIconProps>>)[iconName];
+  return IconComponent ? <IconComponent /> : null;
 };
 
 /**
@@ -59,7 +28,7 @@ const IconMapping: { [key: string]: React.ReactNode } = {
  */
 export const getMenuIcon = (iconName: string): React.ReactNode => {
   if (!iconName) return <MenuOutlined />; // 默认图标
-  return IconMapping[iconName.toLowerCase()] || <MenuOutlined />;
+  return getIconComponent(iconName.toLowerCase()) || <MenuOutlined />;
 };
 
 /**
@@ -256,16 +225,21 @@ export const generateMenuItems = (
 
     if (hasChildren) {
       return {
-        key: item.path,
-        icon: getMenuIcon(item.icon || ""),
+        key: `menu-${item.id}-${item.path}`,
+        icon: getIconComponent(item.icon || ""),
         label: item.name,
         children: generateMenuItems(item.children || []),
       };
     }
 
+    // 如果是系统管理页面的子菜单，使用完整的路径
+    const key = item.path === '/system' && item.parentId ? 
+      `menu-${item.id}-${item.parentId}-${item.path}` : 
+      `menu-${item.id}-${item.path}`;
+
     return {
-      key: item.path,
-      icon: getMenuIcon(item.icon || ""),
+      key,
+      icon: getIconComponent(item.icon || ""),
       label: item.name,
     };
   });

@@ -21,7 +21,6 @@ export async function GET(request: NextRequest) {
       where: { id },
       include: {
         children: true,
-        permissions: true,
         parent: true
       }
     });
@@ -106,9 +105,6 @@ export async function PUT(request: NextRequest) {
         parent: data.parentId !== undefined ? {
           connect: data.parentId ? { id: data.parentId } : undefined
         } : undefined,
-        permissions: data.permissionId !== undefined ? {
-          connect: data.permissionId ? [{ id: data.permissionId }] : undefined
-        } : undefined
       }
     });
 

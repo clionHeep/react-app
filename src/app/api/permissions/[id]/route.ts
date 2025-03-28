@@ -20,7 +20,6 @@ export async function GET(request: NextRequest) {
     const permission = await db.permission.findUnique({
       where: { id },
       include: {
-        menus: true,
         roles: true
       }
     });
@@ -73,8 +72,7 @@ export async function PUT(request: NextRequest) {
     const existingPermission = await db.permission.findUnique({
       where: { id },
       include: {
-        roles: true,
-        menus: true
+        roles: true
       }
     });
 
@@ -85,9 +83,17 @@ export async function PUT(request: NextRequest) {
       }, { status: 404 });
     }
 
-    // 解析请求体
+    // 获取请求体
     const data = await request.json();
     
+    // 验证必填字段
+    if (!data.name) {
+      return NextResponse.json({
+        success: false,
+        message: '缺少必填字段'
+      }, { status: 400 });
+    }
+
     // 检查权限编码是否重复
     if (data.code && data.code !== existingPermission.code) {
       const codeExists = await db.permission.findFirst({
@@ -111,11 +117,17 @@ export async function PUT(request: NextRequest) {
       data: {
         name: data.name !== undefined ? data.name : existingPermission.name,
         code: data.code !== undefined ? data.code : existingPermission.code,
-        description: data.description !== undefined ? data.description : existingPermission.description
+        description: data.description !== undefined ? data.description : existingPermission.description,
+        // 如果提供了角色数组，更新角色关联
+        ...(data.roles ? {
+          roles: {
+            set: [], // 先清除所有现有关联
+            connect: data.roles.map((roleId: number) => ({ id: roleId })) // 然后添加新关联
+          }
+        } : {})
       },
       include: {
-        roles: true,
-        menus: true
+        roles: true
       }
     });
 
@@ -161,8 +173,7 @@ export async function DELETE(request: NextRequest) {
     const existingPermission = await db.permission.findUnique({
       where: { id },
       include: {
-        roles: true,
-        menus: true
+        roles: true
       }
     });
 
@@ -173,19 +184,11 @@ export async function DELETE(request: NextRequest) {
       }, { status: 404 });
     }
 
-    // 检查是否有角色关联此权限
-    if (existingPermission.roles && existingPermission.roles.length > 0) {
+    // 检查是否有角色关联
+    if (existingPermission.roles.length > 0) {
       return NextResponse.json({
         success: false,
-        message: '此权限已分配给角色，请先移除关联角色'
-      }, { status: 400 });
-    }
-
-    // 检查是否有菜单关联此权限
-    if (existingPermission.menus && existingPermission.menus.length > 0) {
-      return NextResponse.json({
-        success: false,
-        message: '此权限已关联菜单，请先移除关联菜单'
+        message: '该权限下存在关联的角色，无法删除'
       }, { status: 400 });
     }
 

@@ -15,7 +15,8 @@
       "@/db": ["src/db"],
       "@/db/*": ["src/db/*"],
       "@/lib/*": ["src/lib/*"],
-      "@/store/*": ["src/store/*"]
+      "@/store/*": ["src/store/*"],
+      "@/api/*": ["src/api/*"]
     },
     "target": "ES2017",
     "lib": [

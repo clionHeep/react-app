@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Layout, Menu, theme, Button } from "antd";
 import { MenuFoldOutlined, MenuUnfoldOutlined } from "@ant-design/icons";
 import type { LayoutProps } from "@/types";
@@ -8,7 +8,8 @@ import Logo from "@/components/common/Logo";
 import UserInfo from "@/components/user/UserInfo";
 import FullscreenButton from "@/components/common/FullscreenButton";
 import { useAuth } from '@/context/AuthContext';
-import { getMenuIcon } from '@/routes/constants';
+import * as Icons from '@ant-design/icons';
+import type { AntdIconProps } from '@ant-design/icons/lib/components/AntdIcon';
 import StaticLoadingPlaceholder from "@/components/common/StaticLoadingPlaceholder";
 import BreadcrumbHandler from "@/components/layouts/BreadcrumbHandler";
 import { getBaseStyles } from "@/styles/layoutStyles";
@@ -36,6 +37,13 @@ interface AntMenuItemType {
   label: string;
   children?: AntMenuItemType[];
 }
+
+// 获取图标组件
+const getIconComponent = (iconName: string) => {
+  if (!iconName) return null;
+  const IconComponent = (Icons as unknown as Record<string, React.ComponentType<AntdIconProps>>)[iconName];
+  return IconComponent ? <IconComponent /> : null;
+};
 
 const SideLayout: React.FC<LayoutProps> = ({
   children,
@@ -74,15 +82,16 @@ const SideLayout: React.FC<LayoutProps> = ({
     }
   };
 
-  const generateMenuItems = (menuItems: MenuItemType[]) => {
-    console.log('[SideLayout] 生成菜单项，菜单数据:', menuItems);
+  // 从后端菜单数据生成菜单项 - 使用useCallback包装
+  const generateMenuItems = useCallback((items: MenuItemType[]): AntMenuItemType[] => {
+    console.log('[SideLayout] 生成菜单项，菜单数据:', items);
     
-    if (!menuItems || !Array.isArray(menuItems) || menuItems.length === 0) {
+    if (!items || !Array.isArray(items) || items.length === 0) {
       console.warn('[SideLayout] 菜单数据为空或格式不正确');
       return [];
     }
     
-    return menuItems
+    return items
       .filter(item => !item.hidden)
       .map(item => {
         const hasChildren = item.children && item.children.length > 0;
@@ -92,7 +101,7 @@ const SideLayout: React.FC<LayoutProps> = ({
         if (hasChildren) {
           return {
             key: item.path || `menu-${item.id}`,
-            icon: getMenuIcon(item.icon || ""),
+            icon: getIconComponent(item.icon || ""),
             label: item.name,
             children: generateMenuItems(item.children),
           };
@@ -100,12 +109,13 @@ const SideLayout: React.FC<LayoutProps> = ({
         
         return {
           key: item.path || `menu-${item.id}`,
-          icon: getMenuIcon(item.icon || ""),
+          icon: getIconComponent(item.icon || ""),
           label: item.name,
         };
       });
-  };
+  }, []);
 
+  // 当后端返回的菜单数据改变时，重新生成菜单项
   useEffect(() => {
     console.log('[SideLayout] === 菜单数据更新 ===');
     console.log('[SideLayout] 菜单数据原始值:', menus);
@@ -127,7 +137,7 @@ const SideLayout: React.FC<LayoutProps> = ({
       console.log('[SideLayout] 数组长度:', Array.isArray(menus) ? menus.length : '非数组');
       setMenuItems([]);
     }
-  }, [menus]);
+  }, [menus, generateMenuItems]);
 
   if (!mounted) {
     return <StaticLoadingPlaceholder />;

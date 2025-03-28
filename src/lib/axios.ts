@@ -36,7 +36,7 @@ httpClient.interceptors.request.use(
 // 添加一个函数来判断是否应该重定向到登录页
 const shouldRedirectToLogin = (() => {
   let lastRedirectTime = 0;
-  let pendingUserInfoRequest = false; // 添加一个标志来跟踪是否正在获取用户信息
+  const pendingUserInfoRequest = false; // 添加一个标志来跟踪是否正在获取用户信息
   
   return () => {
     // 如果正在获取用户信息，不进行重定向
@@ -148,9 +148,6 @@ httpClient.interceptors.response.use(
       
       // 显示认证失败消息
       showMessage.error(AUTH_MESSAGES.UNAUTHORIZED);
-      
-      // 检查是否是API请求还是导航请求
-      const isApiRequest = error.config?.url?.includes('/api/');
       
       // 只有在确认token无效(401)且不是用户信息请求时才重定向
       if (shouldRedirectToLogin() && !error.config?.url?.includes('/api/user/info')) {

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import React from 'react';
 
 // 公开页面列表
 const PUBLIC_ROUTES = ['/login', '/register', '/auth/login', '/auth/register', '/(auth)/login', '/(auth)/register'];
@@ -20,7 +21,7 @@ interface MenuType {
   path: string;
   icon?: string;
   children?: MenuType[];
-  [key: string]: unknown;
+  [key: string]: string | number | boolean | MenuType[] | undefined;
 }
 
 const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
@@ -29,8 +30,8 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
   const [authorized, setAuthorized] = useState(false);
   const { isAuthenticated, isLoading, permissions, menus } = useAuth();
   
-  // 检查用户是否有权限访问当前路径
-  const hasPermissionForPath = (path: string, permissionCodes: string[]) => {
+  // 使用useCallback包装hasPermissionForPath函数，避免无限渲染循环
+  const hasPermissionForPath = React.useCallback((path: string, permissionCodes: string[]) => {
     console.log('检查路径权限:', path);
     console.log('当前菜单数据:', menus);
     
@@ -64,7 +65,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
       return null;
     };
     
-    const matchedMenu = findMenuWithPath(menus as MenuType[], path);
+    const matchedMenu = findMenuWithPath(menus as unknown as MenuType[], path);
     
     // 如果在用户的菜单中找到了匹配的路径，则用户有权限访问
     if (matchedMenu) {
@@ -114,7 +115,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
     console.log('权限检查结果:', hasPermission ? '允许访问' : '权限不足');
     
     return hasPermission;
-  };
+  }, [menus]); // 只依赖menus，避免循环依赖
   
   useEffect(() => {
     // 如果正在加载认证状态，暂时不执行检查
@@ -181,7 +182,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
     };
     
     checkAuth();
-  }, [pathname, router, isAuthenticated, isLoading, permissions, menus]);
+  }, [pathname, router, isAuthenticated, isLoading, permissions, menus, hasPermissionForPath]);
   
   // 如果正在加载，显示加载状态
   if (isLoading) {

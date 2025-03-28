@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Layout, Menu, theme } from "antd";
 import type { LayoutProps } from "@/types";
 import Logo from "@/components/common/Logo";
@@ -51,15 +51,16 @@ const TopLayout: React.FC<LayoutProps> = ({
     setMounted(true);
   }, []);
 
-  const generateMenuItems = (menuItems: MenuItemType[]) => {
-    console.log('[TopLayout] 生成菜单项，菜单数据:', menuItems);
+  // 从后端菜单数据生成菜单项 - 使用useCallback包装
+  const generateMenuItems = useCallback((items: MenuItemType[]): AntMenuItemType[] => {
+    console.log('[TopLayout] 生成菜单项，菜单数据:', items);
     
-    if (!menuItems || !Array.isArray(menuItems) || menuItems.length === 0) {
+    if (!items || !Array.isArray(items) || items.length === 0) {
       console.warn('[TopLayout] 菜单数据为空或格式不正确');
       return [];
     }
     
-    return menuItems
+    return items
       .filter(item => !item.hidden)
       .map(item => {
         const hasChildren = item.children && item.children.length > 0;
@@ -81,8 +82,9 @@ const TopLayout: React.FC<LayoutProps> = ({
           label: item.name,
         };
       });
-  };
+  }, []);
 
+  // 当后端返回的菜单数据改变时，重新生成菜单项
   useEffect(() => {
     console.log('[TopLayout] === 菜单数据更新 ===');
     console.log('[TopLayout] 菜单数据原始值:', menus);
@@ -104,7 +106,7 @@ const TopLayout: React.FC<LayoutProps> = ({
       console.log('[TopLayout] 数组长度:', Array.isArray(menus) ? menus.length : '非数组');
       setMenuItems([]);
     }
-  }, [menus]);
+  }, [menus, generateMenuItems]);
 
   const handleMenuClick = ({ key }: { key: string }) => {
     if (isExternal(key)) {

@@ -117,7 +117,7 @@ export default function AuthForm({ type }: AuthFormProps) {
       await registerApi({
         username: values.username,
         password: values.password,
-        name: values.name,
+        nickname: values.name,
       });
 
       messageApi.success("注册成功！");

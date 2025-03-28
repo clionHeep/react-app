@@ -16,6 +16,7 @@ model menu {
   icon        String?
   sort        Int              @default(0)
   hidden      Boolean          @default(false)
+  status      Int              @default(1)  // 添加状态字段，默认为1（启用）
   parentId    Int?
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
@@ -75,6 +76,7 @@ model role {
   id             Int              @id @default(autoincrement())
   name           String           @unique(map: "Role_name_key")
   description    String?
+  status         Int              @default(1)  // 添加状态字段，默认为1（启用）
   // 父角色ID，形成角色继承关系
   parentId       Int?
   // 是否是系统内置角色，内置角色不可删除

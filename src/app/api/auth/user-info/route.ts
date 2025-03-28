@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { db } from '@/db';
 import { menu, permission } from '@prisma/client';
-import type { RoleMenu, RolePermission } from '@/types/db';
+import type { RolePermission } from '@/types/db';
 import { JsonResponse, createErrorResponse, createServerErrorResponse, ApiStatus } from '@/utils/api-response';
 
 // JWT负载类型
@@ -75,26 +75,22 @@ export async function GET(request: NextRequest) {
     // 获取用户角色ID列表
     const roleIds = user.userrole.map((ur) => ur.roleId);
 
-    // 查询用户菜单
-    const userMenus = await db.rolemenu.findMany({
-      where: {
-        roleId: {
-          in: roleIds
-        }
-      },
+    // 先获取所有菜单
+    const allMenus = await db.menu.findMany({
       include: {
-        menu: true
-      }
-    }) as unknown as RoleMenu[];
-
-    // 处理菜单数据并去重
-    const menuMap = new Map<number, menu>();
-    userMenus.forEach((rm: RoleMenu) => {
-      if (rm.menu && !menuMap.has(rm.menu.id)) {
-        menuMap.set(rm.menu.id, rm.menu);
+        children: true,
+        rolemenu: {
+          where: {
+            roleId: {
+              in: roleIds
+            }
+          }
+        }
       }
     });
-    const menuList = Array.from(menuMap.values());
+
+    // 过滤出用户有权限的菜单
+    const userMenuList = allMenus.filter(menu => menu.rolemenu.length > 0);
 
     // 将扁平菜单列表转换为树形结构
     interface MenuNode {
@@ -139,7 +135,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 生成树形菜单结构
-    const menuTree = buildMenuTree(menuList);
+    const menuTree = buildMenuTree(userMenuList);
 
     // 查询用户权限
     const userPermissions = await db.rolepermission.findMany({

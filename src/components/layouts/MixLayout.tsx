@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Layout, Menu, theme, Button } from "antd";
 import { MenuFoldOutlined, MenuUnfoldOutlined } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
@@ -9,7 +9,8 @@ import Logo from "@/components/common/Logo";
 import UserInfo from "@/components/user/UserInfo";
 import FullscreenButton from "@/components/common/FullscreenButton";
 import { useAuth } from '@/context/AuthContext';
-import { getMenuIcon } from '@/routes/constants';
+import * as Icons from '@ant-design/icons';
+import type { AntdIconProps } from '@ant-design/icons/lib/components/AntdIcon';
 import StaticLoadingPlaceholder from "@/components/common/StaticLoadingPlaceholder";
 import BreadcrumbHandler from "@/components/layouts/BreadcrumbHandler";
 import { getBaseStyles } from "@/styles/layoutStyles";
@@ -37,6 +38,13 @@ interface AntMenuItemType {
   label: string;
   children?: AntMenuItemType[];
 }
+
+// 获取图标组件
+const getIconComponent = (iconName: string) => {
+  if (!iconName) return null;
+  const IconComponent = (Icons as unknown as Record<string, React.ComponentType<AntdIconProps>>)[iconName];
+  return IconComponent ? <IconComponent /> : null;
+};
 
 const MixLayout: React.FC<LayoutProps> = ({
   children,
@@ -66,8 +74,8 @@ const MixLayout: React.FC<LayoutProps> = ({
     setMounted(true);
   }, []);
   
-  // 从后端菜单数据生成菜单项
-  const generateMenuItems = (menuItems: MenuItemType[]): AntMenuItemType[] => {
+  // 从后端菜单数据生成菜单项 - 使用useCallback包装
+  const generateMenuItems = useCallback((menuItems: MenuItemType[]): AntMenuItemType[] => {
     console.log('[MixLayout] 生成菜单项，菜单数据:', menuItems);
     
     if (!menuItems || !Array.isArray(menuItems) || menuItems.length === 0) {
@@ -85,7 +93,7 @@ const MixLayout: React.FC<LayoutProps> = ({
         if (hasChildren) {
           return {
             key: item.path || `menu-${item.id}`,
-            icon: getMenuIcon(item.icon || ""),
+            icon: getIconComponent(item.icon || ""),
             label: item.name,
             children: generateMenuItems(item.children),
           };
@@ -93,13 +101,13 @@ const MixLayout: React.FC<LayoutProps> = ({
         
         return {
           key: item.path || `menu-${item.id}`,
-          icon: getMenuIcon(item.icon || ""),
+          icon: getIconComponent(item.icon || ""),
           label: item.name,
         };
       });
-  };
+  }, []);
 
-  // 当后端返回的菜单数据改变时，重新处理菜单
+  // 当后端返回的菜单数据改变或主菜单选择变化时，重新生成菜单项
   useEffect(() => {
     console.log('[MixLayout] === 菜单数据更新 ===');
     console.log('[MixLayout] 菜单数据原始值:', menus);
@@ -148,7 +156,7 @@ const MixLayout: React.FC<LayoutProps> = ({
       setMainMenuItems([]);
       setSubMenuItems([]);
     }
-  }, [menus, activeMainMenu]);
+  }, [menus, activeMainMenu, generateMenuItems]);
 
   // 处理主菜单点击
   const handleMainMenuClick = (info: { key: string }) => {

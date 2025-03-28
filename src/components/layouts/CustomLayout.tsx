@@ -1,13 +1,14 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Layout, Menu, theme, Button } from "antd";
 import { MenuFoldOutlined, MenuUnfoldOutlined } from "@ant-design/icons";
 import type { LayoutProps } from "@/types";
 import Logo from "@/components/common/Logo";
 import UserInfo from "@/components/user/UserInfo";
 import FullscreenButton from "@/components/common/FullscreenButton";
-import { getMenuIcon } from "@/routes/constants";
+import * as Icons from '@ant-design/icons';
+import type { AntdIconProps } from '@ant-design/icons/lib/components/AntdIcon';
 import StaticLoadingPlaceholder from "@/components/common/StaticLoadingPlaceholder";
 import BreadcrumbHandler from "@/components/layouts/BreadcrumbHandler";
 import { getBaseStyles } from "@/styles/layoutStyles";
@@ -38,6 +39,13 @@ interface AntMenuItemType {
   children?: AntMenuItemType[];
 }
 
+// 获取图标组件
+const getIconComponent = (iconName: string) => {
+  if (!iconName) return null;
+  const IconComponent = (Icons as unknown as Record<string, React.ComponentType<AntdIconProps>>)[iconName];
+  return IconComponent ? <IconComponent /> : null;
+};
+
 const CustomLayout: React.FC<LayoutProps> = ({
   children,
   collapsed,
@@ -56,8 +64,8 @@ const CustomLayout: React.FC<LayoutProps> = ({
     setMounted(true);
   }, []);
 
-  // 从后端菜单数据生成菜单项
-  const generateMenuItems = (items: MenuItemType[]): AntMenuItemType[] => {
+  // 从后端菜单数据生成菜单项 - 使用useCallback包装
+  const generateMenuItems = useCallback((items: MenuItemType[]): AntMenuItemType[] => {
     console.log('[CustomLayout] 生成菜单项，菜单数据:', items);
     
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -75,7 +83,7 @@ const CustomLayout: React.FC<LayoutProps> = ({
         if (hasChildren) {
           return {
             key: item.path || `menu-${item.id}`,
-            icon: getMenuIcon(item.icon || ""),
+            icon: getIconComponent(item.icon || ""),
             label: item.name,
             children: generateMenuItems(item.children),
           };
@@ -83,11 +91,11 @@ const CustomLayout: React.FC<LayoutProps> = ({
         
         return {
           key: item.path || `menu-${item.id}`,
-          icon: getMenuIcon(item.icon || ""),
+          icon: getIconComponent(item.icon || ""),
           label: item.name,
         };
       });
-  };
+  }, []); // 递归函数依赖自身，但React不会处理这种循环依赖
 
   // 当后端返回的菜单数据改变时，重新生成菜单项
   useEffect(() => {
@@ -116,7 +124,7 @@ const CustomLayout: React.FC<LayoutProps> = ({
     };
     
     processMenuData();
-  }, [menus]);
+  }, [menus, generateMenuItems]); // 添加generateMenuItems作为依赖
 
   // 处理菜单点击
   const handleMenuClick = ({ key }: { key: string }) => {

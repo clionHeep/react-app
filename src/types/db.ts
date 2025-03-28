@@ -15,7 +15,9 @@ export interface UserRole {
 export interface RoleMenu {
   roleId: number;
   menuId: number;
-  menu: menu;
+  menu: menu & {
+    children?: menu[];
+  };
 }
 
 /**
