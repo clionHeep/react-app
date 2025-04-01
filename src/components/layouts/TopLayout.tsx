@@ -69,7 +69,7 @@ const TopLayout: React.FC<LayoutProps> = ({
         
         if (hasChildren) {
           return {
-            key: item.path || `menu-${item.id}`,
+            key: item.path,
             icon: getMenuIcon(item.icon || ""),
             label: item.name,
             children: generateMenuItems(item.children),
@@ -77,7 +77,7 @@ const TopLayout: React.FC<LayoutProps> = ({
         }
         
         return {
-          key: item.path || `menu-${item.id}`,
+          key: item.path,
           icon: getMenuIcon(item.icon || ""),
           label: item.name,
         };

@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { Table, Button, Space, Modal, Form, Input, Select, message, Tag } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import request from '@/utils/request';
+import request from '@/lib/axios';
+import { RoleService } from '@/api/role';
 
 interface UserItem {
   id: number;
@@ -30,9 +31,24 @@ const UserPage: React.FC = () => {
     setLoading(true);
     try {
       const response = await request.get('/api/users');
-      console.log('用户数据:', response.data);
-      // 处理分页数据格式
-      const userData = response.data?.list || response.data || [];
+      console.log('用户数据原始响应:', response);
+      
+      // 确保数据是数组格式
+      let userData: UserItem[] = [];
+      
+      // 处理嵌套的响应格式
+      if (response.data?.data) {
+        const data = response.data.data;
+        // 如果数据是分页格式
+        if (data.list && Array.isArray(data.list)) {
+          userData = data.list;
+        }
+        // 如果数据直接是数组
+        else if (Array.isArray(data)) {
+          userData = data;
+        }
+      }
+      
       console.log('处理后的用户数据:', userData);
       setData(userData);
     } catch (error) {
@@ -46,10 +62,13 @@ const UserPage: React.FC = () => {
 
   const fetchRoles = async () => {
     try {
-      const response = await request.get('/api/roles');
-      console.log('角色数据:', response.data);
-      // 处理分页数据格式
-      const roleData = response.data?.list || response.data || [];
+      const response = await RoleService.getList({
+        page: 1,
+        pageSize: 100, // 获取所有角色
+      });
+      console.log('角色数据:', response);
+      // 确保roles是数组
+      const roleData = Array.isArray(response?.data?.list) ? response.data.list : [];
       console.log('处理后的角色数据:', roleData);
       setRoles(roleData);
     } catch (error) {
@@ -136,11 +155,11 @@ const UserPage: React.FC = () => {
       dataIndex: 'roles',
       key: 'roles',
       width: '15%',
-      render: (roles: { id: number; name: string }[]) => (
+      render: (roles: { id: number; name: string }[] | undefined) => (
         <Space>
-          {roles.map(role => (
+          {Array.isArray(roles) ? roles.map(role => (
             <Tag key={role.id} color="blue">{role.name}</Tag>
-          ))}
+          )) : '-'}
         </Space>
       ),
     },
@@ -196,7 +215,7 @@ const UserPage: React.FC = () => {
       <Table
         columns={columns}
         dataSource={data}
-        rowKey="id"
+        rowKey={(record) => record?.id?.toString() || Math.random().toString()}
         loading={loading}
         pagination={false}
         scroll={{ x: 'max-content' }}

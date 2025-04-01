@@ -1,37 +1,59 @@
-import request from '@/utils/request';
-import type { Role, RoleQuery, RoleCreate, RoleUpdate, PageResponse } from '@/types/api';
+import httpClient from '@/lib/axios';
+import type { Role, RoleQuery, RoleCreate, RoleUpdate } from '@/types/api';
+import { handleError, handleSuccess, showResponseMessage } from '@/utils/response';
 
-// 获取角色列表
-export const getRoleList = (params: RoleQuery) => {
-  return request<PageResponse<Role>>({
-    url: '/api/roles',
-    method: 'get',
-    params,
-  });
-};
+export const RoleService = {
+  // 获取角色列表
+  getList: async (params: RoleQuery) => {
+    try {
+      const response = await httpClient.get('/api/roles', { params });
+      return response.data;
+    } catch (error) {
+      const errorResponse = handleError(error);
+      showResponseMessage(errorResponse);
+      throw errorResponse;
+    }
+  },
 
-// 创建角色
-export const createRole = (data: RoleCreate) => {
-  return request<Role>({
-    url: '/api/roles',
-    method: 'post',
-    data,
-  });
-};
+  // 创建角色
+  create: async (data: RoleCreate) => {
+    try {
+      const response = await httpClient.post('/api/roles', data);
+      const result = handleSuccess<Role>(response);
+      showResponseMessage(result);
+      return result.data;
+    } catch (error) {
+      const errorResponse = handleError(error);
+      showResponseMessage(errorResponse);
+      throw errorResponse;
+    }
+  },
 
-// 更新角色
-export const updateRole = (id: number, data: RoleUpdate) => {
-  return request<Role>({
-    url: `/api/roles/${id}`,
-    method: 'put',
-    data,
-  });
-};
+  // 更新角色
+  update: async (id: number, data: RoleUpdate) => {
+    try {
+      const response = await httpClient.put(`/api/roles/${id}`, data);
+      const result = handleSuccess<Role>(response);
+      showResponseMessage(result);
+      return result.data;
+    } catch (error) {
+      const errorResponse = handleError(error);
+      showResponseMessage(errorResponse);
+      throw errorResponse;
+    }
+  },
 
-// 删除角色
-export const deleteRole = (id: number) => {
-  return request<void>({
-    url: `/api/roles/${id}`,
-    method: 'delete',
-  });
+  // 删除角色
+  delete: async (id: number) => {
+    try {
+      const response = await httpClient.delete(`/api/roles/${id}`);
+      const result = handleSuccess(response);
+      showResponseMessage(result);
+      return result.data;
+    } catch (error) {
+      const errorResponse = handleError(error);
+      showResponseMessage(errorResponse);
+      throw errorResponse;
+    }
+  }
 }; 

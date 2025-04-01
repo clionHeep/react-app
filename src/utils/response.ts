@@ -15,6 +15,16 @@ export function handleSuccess<T>(response: AxiosResponse): ApiResponse<T> {
     return data as ApiResponse<T>;
   }
   
+  // 处理嵌套的响应结构
+  if (data && typeof data === 'object' && 'data' in data) {
+    return {
+      success: true,
+      code: response.status,
+      message: data.message || '操作成功',
+      data: data.data as T
+    };
+  }
+  
   // 转换为统一格式
   return {
     success: true,

@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { Card, Row, Col, Statistic } from 'antd';
 import { UserOutlined, TeamOutlined, MenuOutlined } from '@ant-design/icons';
 import Link from 'next/link';
-import request from '@/utils/request';
+import request from '@/lib/axios';
+
 
 const SystemManagement: React.FC = () => {
   const [stats, setStats] = useState({
@@ -17,14 +18,35 @@ const SystemManagement: React.FC = () => {
   const fetchStats = async () => {
     try {
       const response = await request.get('/api/system/stats');
-      console.log('系统统计数据:', response.data);
-      setStats(response.data || {
+      console.log('原始响应:', response);
+      
+      // 处理不同的响应格式
+      let statsData = {
+        userCount: 0,
+        roleCount: 0,
+        menuCount: 0,
+      };
+
+      // 如果响应数据在 data 字段中
+      if (response.data?.data) {
+        const data = response.data.data;
+        statsData = {
+          userCount: Number(data.userCount || 0),
+          roleCount: Number(data.roleCount || 0),
+          menuCount: Number(data.menuCount || 0),
+        };
+      }
+      
+      console.log('处理后的统计数据:', statsData);
+      setStats(statsData);
+    } catch (error) {
+      console.error('获取系统统计数据失败:', error);
+      // 设置默认值
+      setStats({
         userCount: 0,
         roleCount: 0,
         menuCount: 0,
       });
-    } catch (error) {
-      console.error('获取系统统计数据失败:', error);
     } finally {
       setLoading(false);
     }
@@ -36,7 +58,6 @@ const SystemManagement: React.FC = () => {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">系统管理</h1>
       
       <Row gutter={[16, 16]}>
         <Col xs={24} sm={12} md={8}>

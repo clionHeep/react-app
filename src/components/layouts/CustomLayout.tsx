@@ -82,7 +82,7 @@ const CustomLayout: React.FC<LayoutProps> = ({
         
         if (hasChildren) {
           return {
-            key: item.id ? `menu-${item.id}` : item.path,
+            key: item.path,
             icon: getIconComponent(item.icon || ""),
             label: item.name,
             children: generateMenuItems(item.children),
@@ -90,7 +90,7 @@ const CustomLayout: React.FC<LayoutProps> = ({
         }
         
         return {
-          key: item.id ? `menu-${item.id}` : item.path,
+          key: item.path,
           icon: getIconComponent(item.icon || ""),
           label: item.name,
         };

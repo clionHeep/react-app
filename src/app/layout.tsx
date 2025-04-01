@@ -5,7 +5,7 @@ import "@/styles/darkModeEnhancements.css";
 import "@/styles/darkModeWrapperStyles.css";
 import { Inter } from "next/font/google";
 import { AntdRegistry } from "@ant-design/nextjs-registry";
-import { ConfigProvider, theme } from "antd";
+import { ConfigProvider, theme, App as AntdApp } from "antd";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import AuthGuard from "@/components/auth/AuthGuard";
@@ -99,21 +99,23 @@ export default function RootLayout({
               }}
               locale={zhCN}
             >
-              <MessageProvider>
-                <BreadcrumbProvider>
-                  <AuthProvider>
-                    <RouterProvider>
-                      {isLoginPage ? (
-                        children
-                      ) : (
-                        <AuthGuard>
-                          <MainLayout>{children}</MainLayout>
-                        </AuthGuard>
-                      )}
-                    </RouterProvider>
-                  </AuthProvider>
-                </BreadcrumbProvider>
-              </MessageProvider>
+              <AntdApp>
+                <MessageProvider>
+                  <BreadcrumbProvider>
+                    <AuthProvider>
+                      <RouterProvider>
+                        {isLoginPage ? (
+                          children
+                        ) : (
+                          <AuthGuard>
+                            <MainLayout>{children}</MainLayout>
+                          </AuthGuard>
+                        )}
+                      </RouterProvider>
+                    </AuthProvider>
+                  </BreadcrumbProvider>
+                </MessageProvider>
+              </AntdApp>
             </ConfigProvider>
           </ReduxProvider>
         </AntdRegistry>

@@ -175,7 +175,6 @@ export interface RegisterRequest {
  */
 export interface ApiError {
   message: string;
-  status?: number;
   error?: string;
 }
 
@@ -189,18 +188,22 @@ export interface RequestWithRetry extends InternalAxiosRequestConfig {
 /**
  * 统一API响应格式
  */
-export interface ApiResponse<T> {
+export interface ApiResponse<T = unknown> {
+  success: boolean;
   code: number;
   message: string;
-  data: T;
+  data?: T;
+  error?: string;
 }
 
 /**
  * 分页响应格式
  */
 export interface PageResponse<T> {
-  total: number;
-  list: T[];
+  data: {
+    total: number;
+    list: T[];
+  };
 }
 
 /**
@@ -214,4 +217,14 @@ export interface Permission {
   status: number;
   createTime: string;
   updateTime: string;
+}
+
+/**
+ * 用户信息响应
+ */
+export interface UserInfoResponse {
+  user: User;
+  menus: Menu[];
+  permissions: Permission[];
+  roles: Role[];
 }

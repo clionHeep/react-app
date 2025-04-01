@@ -8,5 +8,10 @@ export const STATIC_MENUS: Menu[] = [
     path: "/",
     icon: "HomeOutlined",
     children: [],
+    parentId: null,
+    order: 0,
+    status: 1,
+    createTime: new Date().toISOString(),
+    updateTime: new Date().toISOString(),
   },
 ]; 

@@ -100,7 +100,7 @@ const SideLayout: React.FC<LayoutProps> = ({
         
         if (hasChildren) {
           return {
-            key: item.path || `menu-${item.id}`,
+            key: item.path ,
             icon: getIconComponent(item.icon || ""),
             label: item.name,
             children: generateMenuItems(item.children),
@@ -108,7 +108,7 @@ const SideLayout: React.FC<LayoutProps> = ({
         }
         
         return {
-          key: item.path || `menu-${item.id}`,
+          key: item.path,
           icon: getIconComponent(item.icon || ""),
           label: item.name,
         };

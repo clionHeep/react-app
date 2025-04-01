@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Table, Button, Space, Modal, Form, Input, Select, message } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import request from '@/utils/request';
+import request from '@/lib/axios';
 import * as Icons from '@ant-design/icons';
 import type { AntdIconProps } from '@ant-design/icons/lib/components/AntdIcon';
 
@@ -29,9 +29,24 @@ const MenuPage: React.FC = () => {
     setLoading(true);
     try {
       const response = await request.get('/api/menus');
-      console.log('菜单数据:', response.data);
-      // 处理分页数据格式
-      const menuData = response.data?.list || response.data || [];
+      console.log('菜单数据原始响应:', response);
+      
+      // 确保数据是数组格式
+      let menuData: MenuItem[] = [];
+      
+      // 处理嵌套的响应格式
+      if (response.data?.data) {
+        const data = response.data.data;
+        // 如果数据是分页格式
+        if (data.list && Array.isArray(data.list)) {
+          menuData = data.list;
+        }
+        // 如果数据直接是数组
+        else if (Array.isArray(data)) {
+          menuData = data;
+        }
+      }
+      
       console.log('处理后的菜单数据:', menuData);
       setData(menuData);
     } catch (error) {
