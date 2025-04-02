@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
 import { verifyAdmin } from '@/utils/auth-utils';
-import type { Menu, MenuCreate, MenuUpdate } from '@/types/api';
+import type { Menu } from '@/types/api';
 
 /**
  * 获取菜单列表
@@ -37,13 +37,32 @@ export async function GET(request: Request) {
     const apiMenus: Menu[] = menus.map(menu => ({
       id: menu.id,
       name: menu.name,
-      path: menu.path,
+      path: menu.path || '',
       icon: menu.icon || '',
       order: menu.sort,
-      status: menu.hidden ? 0 : 1,
+      status: menu.status,
       parentId: menu.parentId,
       createTime: menu.createdAt.toISOString(),
       updateTime: menu.updatedAt.toISOString(),
+      type: menu.type,
+      component: menu.component || '',
+      permission: menu.permission || '',
+      routeName: menu.routeName || '',
+      layout: menu.layout || 'DEFAULT',
+      redirect: menu.redirect || '',
+      i18nKey: menu.i18nKey || '',
+      params: menu.params || {},
+      query: menu.query || {},
+      hidden: menu.hidden,
+      hideTab: menu.hideTab,
+      hideMenu: menu.hideMenu,
+      hideBreadcrumb: menu.hideBreadcrumb,
+      hideChildren: menu.hideChildren,
+      isExternal: menu.isExternal,
+      keepAlive: menu.keepAlive,
+      constant: menu.constant,
+      affix: menu.affix,
+      remark: menu.remark || ''
     }));
 
     return NextResponse.json({
@@ -73,20 +92,113 @@ export async function GET_TREE() {
   try {
     const menus = await db.menu.findMany({
       orderBy: { sort: 'asc' },
+      include: {
+        children: true
+      }
     });
 
     // 转换数据库模型为API类型
-    const apiMenus: Menu[] = menus.map(menu => ({
-      id: menu.id,
-      name: menu.name,
-      path: menu.path,
-      icon: menu.icon || '',
-      order: menu.sort,
-      status: menu.hidden ? 0 : 1,
-      parentId: menu.parentId,
-      createTime: menu.createdAt.toISOString(),
-      updateTime: menu.updatedAt.toISOString(),
-    }));
+    const apiMenus: Menu[] = menus.map(menu => {
+      // 处理路径格式
+      let path = menu.path || '';
+      let component = menu.component || '';
+      
+      // 确保所有菜单路径以 / 开头
+      if (!path.startsWith('/')) {
+        path = '/' + path;
+      }
+
+      // 如果是父级菜单（有子菜单）
+      const hasChildren = menu.children && menu.children.length > 0;
+      if (hasChildren) {
+        // 如果没有设置 component，则使用 path
+        if (!component) {
+          component = path;
+        }
+      }
+
+      // 处理子菜单
+      const children = menu.children?.map(child => {
+        let childPath = child.path || '';
+        let childComponent = child.component || '';
+        
+        if (!childPath.startsWith('/')) {
+          childPath = '/' + childPath;
+        }
+
+        // 如果没有设置 component，则使用 path
+        if (!childComponent) {
+          childComponent = childPath;
+        }
+        
+        return {
+          id: child.id,
+          name: child.name,
+          path: childPath,
+          icon: child.icon || '',
+          order: child.sort,
+          status: child.status,
+          parentId: child.parentId,
+          createTime: child.createdAt.toISOString(),
+          updateTime: child.updatedAt.toISOString(),
+          type: child.type,
+          component: childComponent,
+          permission: child.permission || '',
+          routeName: child.routeName || '',
+          layout: child.layout || 'DEFAULT',
+          redirect: child.redirect || '',
+          i18nKey: child.i18nKey || '',
+          params: child.params || {},
+          query: child.query || {},
+          hidden: child.hidden,
+          hideTab: child.hideTab,
+          hideMenu: child.hideMenu,
+          hideBreadcrumb: child.hideBreadcrumb,
+          hideChildren: child.hideChildren,
+          isExternal: child.isExternal,
+          keepAlive: child.keepAlive,
+          constant: child.constant,
+          affix: child.affix,
+          remark: child.remark || '',
+          children: []
+        };
+      }) || [];
+
+      // 创建父级菜单项
+      const parentMenuItem = {
+        id: menu.id,
+        name: menu.name,
+        path: path,
+        icon: menu.icon || '',
+        order: menu.sort,
+        status: menu.status,
+        parentId: menu.parentId,
+        createTime: menu.createdAt.toISOString(),
+        updateTime: menu.updatedAt.toISOString(),
+        type: menu.type,
+        component: component,
+        permission: menu.permission || '',
+        routeName: menu.routeName || '',
+        layout: menu.layout || 'DEFAULT',
+        redirect: menu.redirect || '',
+        i18nKey: menu.i18nKey || '',
+        params: menu.params || {},
+        query: menu.query || {},
+        hidden: menu.hidden,
+        hideTab: menu.hideTab,
+        hideMenu: menu.hideMenu,
+        hideBreadcrumb: menu.hideBreadcrumb,
+        hideChildren: menu.hideChildren,
+        isExternal: menu.isExternal,
+        keepAlive: menu.keepAlive,
+        constant: menu.constant,
+        affix: menu.affix,
+        remark: menu.remark || '',
+        children: children
+      };
+
+      return parentMenuItem;
+    });
 
     // 构建树形结构
     const buildTree = (items: Menu[], parentId: number | null = null): Menu[] => {
@@ -122,43 +234,66 @@ export async function GET_TREE() {
  */
 export async function POST(request: Request) {
   try {
-    const body: MenuCreate = await request.json();
+    const body = await request.json();
+    console.log('创建菜单请求数据:', body);
     
+    // 验证必填字段
+    if (!body.name || !body.type) {
+      return NextResponse.json(
+        {
+          code: 400,
+          message: '菜单名称和类型为必填项',
+        },
+        { status: 400 }
+      );
+    }
+
     const menu = await db.menu.create({
       data: {
         name: body.name,
+        routeName: body.routeName,
         path: body.path,
+        component: body.component,
+        layout: body.layout,
+        redirect: body.redirect,
         icon: body.icon,
-        sort: body.order,
-        hidden: body.status === 0,
+        i18nKey: body.i18nKey,
+        type: body.type,
+        permission: body.permission,
+        params: body.params,
+        query: body.query,
+        sort: body.sort || 0,
+        hidden: body.hidden || false,
+        hideTab: body.hideTab || false,
+        hideMenu: body.hideMenu || false,
+        hideBreadcrumb: body.hideBreadcrumb || false,
+        hideChildren: body.hideChildren || false,
+        status: body.status || 1,
+        isExternal: body.isExternal || false,
+        keepAlive: body.keepAlive || true,
+        constant: body.constant || false,
+        affix: body.affix || false,
         parentId: body.parentId,
+        remark: body.remark,
       },
     });
 
-    // 转换数据库模型为API类型
-    const apiMenu: Menu = {
-      id: menu.id,
-      name: menu.name,
-      path: menu.path,
-      icon: menu.icon || '',
-      order: menu.sort,
-      status: menu.hidden ? 0 : 1,
-      parentId: menu.parentId,
-      createTime: menu.createdAt.toISOString(),
-      updateTime: menu.updatedAt.toISOString(),
-    };
+    console.log('菜单创建成功:', menu);
 
     return NextResponse.json({
       code: 0,
       message: 'success',
-      data: apiMenu,
+      data: menu,
     });
   } catch (error) {
-    console.error('创建菜单失败:', error);
+    console.error('创建菜单失败，详细错误:', error);
+    if (error instanceof Error) {
+      console.error('错误堆栈:', error.stack);
+    }
     return NextResponse.json(
       {
         code: 500,
-        message: 'Internal Server Error',
+        message: error instanceof Error ? error.message : 'Internal Server Error',
       },
       { status: 500 }
     );
@@ -170,44 +305,80 @@ export async function POST(request: Request) {
  */
 export async function PUT(request: Request) {
   try {
-    const body: MenuUpdate & { id: number } = await request.json();
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+    
+    if (!id) {
+      return NextResponse.json(
+        {
+          code: 400,
+          message: 'Missing menu ID',
+        },
+        { status: 400 }
+      );
+    }
+
+    const body = await request.json();
+    console.log('更新菜单请求数据:', { id, body });
+    
+    // 验证必填字段
+    if (!body.name || !body.type) {
+      return NextResponse.json(
+        {
+          code: 400,
+          message: '菜单名称和类型为必填项',
+        },
+        { status: 400 }
+      );
+    }
     
     const menu = await db.menu.update({
-      where: { id: body.id },
+      where: { id: parseInt(id) },
       data: {
         name: body.name,
+        routeName: body.routeName,
         path: body.path,
+        component: body.component,
+        layout: body.layout,
+        redirect: body.redirect,
         icon: body.icon,
-        sort: body.order,
-        hidden: body.status === 0,
+        i18nKey: body.i18nKey,
+        type: body.type,
+        permission: body.permission,
+        params: body.params,
+        query: body.query,
+        sort: body.sort,
+        hidden: body.hidden,
+        hideTab: body.hideTab,
+        hideMenu: body.hideMenu,
+        hideBreadcrumb: body.hideBreadcrumb,
+        hideChildren: body.hideChildren,
+        status: body.status,
+        isExternal: body.isExternal,
+        keepAlive: body.keepAlive,
+        constant: body.constant,
+        affix: body.affix,
         parentId: body.parentId,
+        remark: body.remark,
       },
     });
 
-    // 转换数据库模型为API类型
-    const apiMenu: Menu = {
-      id: menu.id,
-      name: menu.name,
-      path: menu.path,
-      icon: menu.icon || '',
-      order: menu.sort,
-      status: menu.hidden ? 0 : 1,
-      parentId: menu.parentId,
-      createTime: menu.createdAt.toISOString(),
-      updateTime: menu.updatedAt.toISOString(),
-    };
+    console.log('菜单更新成功:', menu);
 
     return NextResponse.json({
       code: 0,
       message: 'success',
-      data: apiMenu,
+      data: menu,
     });
   } catch (error) {
-    console.error('更新菜单失败:', error);
+    console.error('更新菜单失败，详细错误:', error);
+    if (error instanceof Error) {
+      console.error('错误堆栈:', error.stack);
+    }
     return NextResponse.json(
       {
         code: 500,
-        message: 'Internal Server Error',
+        message: error instanceof Error ? error.message : 'Internal Server Error',
       },
       { status: 500 }
     );

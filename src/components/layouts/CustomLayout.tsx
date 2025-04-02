@@ -7,8 +7,8 @@ import type { LayoutProps } from "@/types";
 import Logo from "@/components/common/Logo";
 import UserInfo from "@/components/user/UserInfo";
 import FullscreenButton from "@/components/common/FullscreenButton";
-import * as Icons from '@ant-design/icons';
-import type { AntdIconProps } from '@ant-design/icons/lib/components/AntdIcon';
+import * as Icons from "@ant-design/icons";
+import type { AntdIconProps } from "@ant-design/icons/lib/components/AntdIcon";
 import StaticLoadingPlaceholder from "@/components/common/StaticLoadingPlaceholder";
 import BreadcrumbHandler from "@/components/layouts/BreadcrumbHandler";
 import { getBaseStyles } from "@/styles/layoutStyles";
@@ -35,14 +35,16 @@ interface MenuItemType {
 interface AntMenuItemType {
   key: string;
   icon?: React.ReactNode;
-  label: string;
+  label: React.ReactNode;
   children?: AntMenuItemType[];
 }
 
 // 获取图标组件
 const getIconComponent = (iconName: string) => {
   if (!iconName) return null;
-  const IconComponent = (Icons as unknown as Record<string, React.ComponentType<AntdIconProps>>)[iconName];
+  const IconComponent = (
+    Icons as unknown as Record<string, React.ComponentType<AntdIconProps>>
+  )[iconName];
   return IconComponent ? <IconComponent /> : null;
 };
 
@@ -65,64 +67,86 @@ const CustomLayout: React.FC<LayoutProps> = ({
   }, []);
 
   // 从后端菜单数据生成菜单项 - 使用useCallback包装
-  const generateMenuItems = useCallback((items: MenuItemType[]): AntMenuItemType[] => {
-    console.log('[CustomLayout] 生成菜单项，菜单数据:', items);
-    
-    if (!items || !Array.isArray(items) || items.length === 0) {
-      console.warn('[CustomLayout] 菜单数据为空或格式不正确');
-      return [];
-    }
-    
-    return items
-      .filter(item => !item.hidden) // 过滤掉隐藏的菜单项
-      .map(item => {
-        const hasChildren = item.children && item.children.length > 0;
-        
-        console.log(`[CustomLayout] 处理菜单项: ${item.name}, 路径: ${item.path || '未指定'}`);
-        
-        if (hasChildren) {
-          return {
-            key: item.path,
+  const generateMenuItems = useCallback(
+    (items: MenuItemType[]): AntMenuItemType[] => {
+      console.log("[CustomLayout] 生成菜单项，菜单数据:", items);
+
+      if (!items || !Array.isArray(items) || items.length === 0) {
+        console.warn("[CustomLayout] 菜单数据为空或格式不正确");
+        return [];
+      }
+
+      return items
+        .filter((item) => !item.hidden) // 过滤掉隐藏的菜单项
+        .map((item) => {
+          const hasChildren = item.children && item.children.length > 0;
+
+          console.log(
+            `[CustomLayout] 处理菜单项: ${item.name}, 路径: ${
+              item.path || "未指定"
+            }`
+          );
+
+          // 创建基础菜单项，无论是否有子菜单都可以点击
+          const menuItem: AntMenuItemType = {
+            key: item.path || '',
             icon: getIconComponent(item.icon || ""),
-            label: item.name,
-            children: generateMenuItems(item.children),
+            label: (
+              <div
+                onClick={(e) => {
+                  // 阻止事件冒泡，防止触发父级菜单的展开/收起
+                  e.stopPropagation();
+                  if (item.path) {
+                    router.push(item.path);
+                  }
+                }}
+                style={{ display: 'inline-block', width: '100%' }}
+              >
+                {item.name}
+              </div>
+            ),
           };
-        }
-        
-        return {
-          key: item.path,
-          icon: getIconComponent(item.icon || ""),
-          label: item.name,
-        };
-      });
-  }, []);
+
+          // 如果有子菜单，添加子菜单项
+          if (hasChildren) {
+            menuItem.children = generateMenuItems(item.children);
+          }
+
+          return menuItem;
+        });
+    },
+    [router]
+  );
 
   // 当后端返回的菜单数据改变时，重新生成菜单项
   useEffect(() => {
     const processMenuData = () => {
-      console.log('[CustomLayout] === 菜单数据更新 ===');
-      console.log('[CustomLayout] 菜单数据原始值:', menus);
-      
+      console.log("[CustomLayout] === 菜单数据更新 ===");
+      console.log("[CustomLayout] 菜单数据原始值:", menus);
+
       if (menus && Array.isArray(menus) && menus.length > 0) {
         try {
           // 将后端返回的菜单数据映射为菜单项
           const items = generateMenuItems(menus as unknown as MenuItemType[]);
-          console.log('[CustomLayout] 生成的菜单项:', items);
+          console.log("[CustomLayout] 生成的菜单项:", items);
           setMenuItems(items);
         } catch (error) {
-          console.error('[CustomLayout] 处理菜单数据时出错:', error);
-          console.warn('[CustomLayout] 使用空菜单');
+          console.error("[CustomLayout] 处理菜单数据时出错:", error);
+          console.warn("[CustomLayout] 使用空菜单");
           setMenuItems([]);
         }
       } else {
-        console.warn('[CustomLayout] 警告: 无菜单数据或格式不正确');
-        console.log('[CustomLayout] menus类型:', typeof menus);
-        console.log('[CustomLayout] 是否为数组:', Array.isArray(menus));
-        console.log('[CustomLayout] 数组长度:', Array.isArray(menus) ? menus.length : '非数组');
+        console.warn("[CustomLayout] 警告: 无菜单数据或格式不正确");
+        console.log("[CustomLayout] menus类型:", typeof menus);
+        console.log("[CustomLayout] 是否为数组:", Array.isArray(menus));
+        console.log(
+          "[CustomLayout] 数组长度:",
+          Array.isArray(menus) ? menus.length : "非数组"
+        );
         setMenuItems([]);
       }
     };
-    
+
     processMenuData();
   }, [menus, generateMenuItems]); // 添加generateMenuItems作为依赖
 
@@ -130,24 +154,24 @@ const CustomLayout: React.FC<LayoutProps> = ({
   const handleMenuClick = ({ key }: { key: string }) => {
     // 外部链接，使用window.open打开
     if (isExternal(key)) {
-      window.open(key, '_blank');
+      window.open(key, "_blank");
       return;
     }
-    
+
     // 内部路径，使用Next.js 15 App Router导航
     const result = resolvePath(key);
-    
-    if (typeof result === 'string') {
+
+    if (typeof result === "string") {
       // Next.js 15优化：使用router.push进行导航，默认支持无需刷新的客户端导航
       router.push(result, { scroll: true });
     } else {
       // 使用对象形式传递查询参数 (Next.js 15支持)
       const { path, query } = result;
-      
+
       // 构建查询字符串
       const queryString = new URLSearchParams(query).toString();
       const url = queryString ? `${path}?${queryString}` : path;
-      
+
       // 带滚动行为的导航
       router.push(url, { scroll: true });
     }
@@ -213,12 +237,12 @@ const CustomLayout: React.FC<LayoutProps> = ({
               borderRadius: 8,
               minHeight: "calc(100vh - 184px)",
               fontSize: 14,
-              boxShadow: isDarkMode(token) 
-                ? '0 4px 16px rgba(0,0,0,0.5), 0 1px 4px rgba(255,255,255,0.05)'
-                : 'none',
+              boxShadow: isDarkMode(token)
+                ? "0 4px 16px rgba(0,0,0,0.5), 0 1px 4px rgba(255,255,255,0.05)"
+                : "none",
               border: isDarkMode(token)
-                ? '1px solid rgba(255, 255, 255, 0.15)'
-                : 'none',
+                ? "1px solid rgba(255, 255, 255, 0.15)"
+                : "none",
             }}
           >
             {children}
@@ -274,7 +298,7 @@ const CustomLayout: React.FC<LayoutProps> = ({
           <div className="menu-container">
             <Menu
               mode="inline"
-              selectedKeys={[pathname || '/']}
+              selectedKeys={[pathname || "/"]}
               items={menuItems}
               onClick={handleMenuClick}
               style={{

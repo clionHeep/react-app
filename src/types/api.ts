@@ -1,4 +1,5 @@
 import { InternalAxiosRequestConfig } from 'axios';
+import { Prisma } from '@prisma/client';
 
 /**
  * 菜单类型定义
@@ -13,6 +14,25 @@ export interface Menu {
   status: number;
   createTime: string;
   updateTime: string;
+  type: "DIRECTORY" | "MENU" | "BUTTON";
+  component?: string;
+  permission?: string;
+  routeName?: string;
+  layout?: "DEFAULT" | "BLANK" | "CUSTOM";
+  redirect?: string;
+  i18nKey?: string;
+  params?: Record<string, string | number | boolean> | Prisma.JsonValue;
+  query?: Record<string, string | number | boolean> | Prisma.JsonValue;
+  hidden?: boolean;
+  hideTab?: boolean;
+  hideMenu?: boolean;
+  hideBreadcrumb?: boolean;
+  hideChildren?: boolean;
+  isExternal?: boolean;
+  keepAlive?: boolean;
+  constant?: boolean;
+  affix?: boolean;
+  remark?: string;
   children?: Menu[];
 }
 

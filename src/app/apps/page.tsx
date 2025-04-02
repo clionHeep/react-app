@@ -1,10 +1,12 @@
+"use client";
+
 import React from "react";
 import { Typography, Card, Tabs } from "antd";
 import { AppstoreOutlined, ShoppingOutlined } from "@ant-design/icons";
 
 const { Title, Paragraph } = Typography;
 
-export default function AppsPage() {
+const AppsPage: React.FC = () => {
   return (
     <div className="apps-container" style={{ padding: "24px" }}>
       <Title level={2}>应用管理</Title>
@@ -56,4 +58,6 @@ export default function AppsPage() {
       />
     </div>
   );
-}
+};
+
+export default AppsPage;

@@ -1,22 +1,130 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { Table, Button, Space, Modal, Form, Input, Select, message } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
-import request from '@/lib/axios';
-import * as Icons from '@ant-design/icons';
-import type { AntdIconProps } from '@ant-design/icons/lib/components/AntdIcon';
+import React, { useState, useEffect } from "react";
+import {
+  Table,
+  Button,
+  Space,
+  Modal,
+  Form,
+  Input,
+  Select,
+  message,
+  Switch,
+  Tag,
+  Popover,
+  Collapse,
+  App,
+} from "antd";
+import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import type { ColumnsType } from "antd/es/table";
+import request from "@/lib/axios";
+import * as Icons from "@ant-design/icons";
+import type { AntdIconProps } from "@ant-design/icons/lib/components/AntdIcon";
 
 interface MenuItem {
   id: number;
   name: string;
-  path: string;
+  routeName?: string;
+  path?: string;
+  component?: string;
+  layout?: "DEFAULT" | "BLANK" | "CUSTOM";
+  redirect?: string;
   icon?: string;
-  parentId?: number;
+  i18nKey?: string;
+  type: "DIRECTORY" | "MENU" | "BUTTON";
+  permission?: string;
+  params?: Record<string, string | number | boolean>;
+  query?: Record<string, string | number | boolean>;
   sort: number;
+  hidden: boolean;
+  hideTab: boolean;
+  hideMenu: boolean;
+  hideBreadcrumb: boolean;
+  hideChildren: boolean;
+  status: number;
+  isExternal: boolean;
+  keepAlive: boolean;
+  constant: boolean;
+  affix: boolean;
+  parentId?: number;
   children?: MenuItem[];
+  remark?: string;
+  [key: string]:
+    | string
+    | number
+    | boolean
+    | MenuItem[]
+    | Record<string, string | number | boolean>
+    | undefined;
 }
+
+// 图标选择器组件
+const IconPicker: React.FC<{
+  value?: string;
+  onChange?: (value: string) => void;
+}> = ({ value, onChange }) => {
+  const [searchText, setSearchText] = useState("");
+  const [visible, setVisible] = useState(false);
+
+  const getIconComponent = (iconName: string) => {
+    if (!iconName) return null;
+    const IconComponent = (
+      Icons as unknown as Record<string, React.ComponentType<AntdIconProps>>
+    )[iconName];
+    return IconComponent ? <IconComponent /> : null;
+  };
+
+  const iconList = Object.keys(Icons)
+    .filter((key) => key.endsWith("Outlined"))
+    .filter((key) => key.toLowerCase().includes(searchText.toLowerCase()));
+
+  const content = (
+    <div style={{ width: 300 }}>
+      <Input
+        placeholder="搜索图标"
+        value={searchText}
+        onChange={(e) => setSearchText(e.target.value)}
+        style={{ marginBottom: 8 }}
+      />
+      <div style={{ height: 300, overflow: "auto" }}>
+        <Space wrap>
+          {iconList.map((key) => {
+            const IconComponent = (
+              Icons as unknown as Record<
+                string,
+                React.ComponentType<AntdIconProps>
+              >
+            )[key];
+            return (
+              <Button
+                key={key}
+                type={value === key ? "primary" : "text"}
+                icon={<IconComponent />}
+                onClick={() => {
+                  onChange?.(key);
+                  setVisible(false);
+                }}
+              />
+            );
+          })}
+        </Space>
+      </div>
+    </div>
+  );
+
+  return (
+    <Popover
+      content={content}
+      title="选择图标"
+      trigger="click"
+      open={visible}
+      onOpenChange={setVisible}
+    >
+      <Button>{value ? getIconComponent(value) : "选择图标"}</Button>
+    </Popover>
+  );
+};
 
 const MenuPage: React.FC = () => {
   const [data, setData] = useState<MenuItem[]>([]);
@@ -25,33 +133,58 @@ const MenuPage: React.FC = () => {
   const [form] = Form.useForm();
   const [editingId, setEditingId] = useState<number | null>(null);
 
+  const getIconComponent = (iconName: string) => {
+    if (!iconName) return null;
+    const IconComponent = (
+      Icons as unknown as Record<string, React.ComponentType<AntdIconProps>>
+    )[iconName];
+    return IconComponent ? <IconComponent /> : null;
+  };
+
   const fetchData = async () => {
     setLoading(true);
     try {
-      const response = await request.get('/api/menus');
-      console.log('菜单数据原始响应:', response);
-      
-      // 确保数据是数组格式
+      const response = await request.get("/api/menus");
+      console.log("菜单数据原始响应:", response);
+
       let menuData: MenuItem[] = [];
-      
-      // 处理嵌套的响应格式
+
       if (response.data?.data) {
         const data = response.data.data;
-        // 如果数据是分页格式
         if (data.list && Array.isArray(data.list)) {
-          menuData = data.list;
-        }
-        // 如果数据直接是数组
-        else if (Array.isArray(data)) {
+          menuData = data.list.map((item: MenuItem) => ({
+            ...item,
+            sort: item.order || 0,
+            status: item.status || 1,
+            hidden: item.hidden || false,
+            hideTab: item.hideTab || false,
+            hideMenu: item.hideMenu || false,
+            hideBreadcrumb: item.hideBreadcrumb || false,
+            hideChildren: item.hideChildren || false,
+            isExternal: item.isExternal || false,
+            keepAlive: item.keepAlive || true,
+            constant: item.constant || false,
+            affix: item.affix || false,
+            component: item.component || '',
+            permission: item.permission || '',
+            routeName: item.routeName || '',
+            layout: item.layout || 'DEFAULT',
+            redirect: item.redirect || '',
+            i18nKey: item.i18nKey || '',
+            params: item.params || {},
+            query: item.query || {},
+            remark: item.remark || ''
+          }));
+        } else if (Array.isArray(data)) {
           menuData = data;
         }
       }
-      
-      console.log('处理后的菜单数据:', menuData);
+
+      console.log("处理后的菜单数据:", menuData);
       setData(menuData);
     } catch (error) {
-      console.error('获取菜单数据失败:', error);
-      message.error('获取菜单数据失败');
+      console.error("获取菜单数据失败:", error);
+      message.error("获取菜单数据失败");
       setData([]);
     } finally {
       setLoading(false);
@@ -77,66 +210,131 @@ const MenuPage: React.FC = () => {
   const handleDelete = async (id: number) => {
     try {
       await request.delete(`/api/menus/${id}`);
-      message.success('删除成功');
+      message.success("删除成功");
       fetchData();
     } catch {
-      message.error('删除失败');
+      message.error("删除失败");
     }
   };
 
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
+
+      // 处理布尔值字段
+      const booleanFields = [
+        "hidden",
+        "hideTab",
+        "hideMenu",
+        "hideBreadcrumb",
+        "hideChildren",
+        "isExternal",
+        "keepAlive",
+        "constant",
+        "affix",
+      ];
+      booleanFields.forEach((field) => {
+        values[field] = !!values[field];
+      });
+
+      // 处理 JSON 字段
+      if (values.params && typeof values.params === "string") {
+        try {
+          values.params = JSON.parse(values.params);
+        } catch {
+          values.params = {};
+        }
+      }
+      if (values.query && typeof values.query === "string") {
+        try {
+          values.query = JSON.parse(values.query);
+        } catch {
+          values.query = {};
+        }
+      }
+
       if (editingId) {
-        await request.put(`/api/menus/${editingId}`, values);
-        message.success('更新成功');
+        await request.put(`/api/menus?id=${editingId}`, values);
+        message.success("更新成功");
       } else {
-        await request.post('/api/menus', values);
-        message.success('添加成功');
+        await request.post("/api/menus", values);
+        message.success("添加成功");
       }
       setModalVisible(false);
       fetchData();
-    } catch {
-      message.error('操作失败');
+    } catch (error) {
+      console.error("操作失败:", error);
+      message.error("操作失败");
     }
-  };
-
-  const getIconComponent = (iconName: string) => {
-    if (!iconName) return null;
-    const IconComponent = (Icons as unknown as Record<string, React.ComponentType<AntdIconProps>>)[iconName];
-    return IconComponent ? <IconComponent /> : null;
   };
 
   const columns: ColumnsType<MenuItem> = [
     {
-      title: '名称',
-      dataIndex: 'name',
-      key: 'name',
-      width: '20%',
+      title: "名称",
+      dataIndex: "name",
+      key: "name",
+      width: "15%",
     },
     {
-      title: '路径',
-      dataIndex: 'path',
-      key: 'path',
-      width: '20%',
+      title: "类型",
+      dataIndex: "type",
+      key: "type",
+      width: "10%",
+      render: (type: string) =>
+        ({
+          DIRECTORY: "目录",
+          MENU: "菜单",
+          BUTTON: "按钮",
+        }[type] || type),
     },
     {
-      title: '图标',
-      dataIndex: 'icon',
-      key: 'icon',
-      width: '15%',
+      title: "图标",
+      dataIndex: "icon",
+      key: "icon",
+      width: "8%",
       render: (icon: string) => getIconComponent(icon),
     },
     {
-      title: '排序',
-      dataIndex: 'sort',
-      key: 'sort',
-      width: '10%',
+      title: "路由路径",
+      dataIndex: "path",
+      key: "path",
+      width: "15%",
     },
     {
-      title: '操作',
-      key: 'action',
-      width: '20%',
+      title: "组件",
+      dataIndex: "component",
+      key: "component",
+      width: "15%",
+      ellipsis: true,
+    },
+    {
+      title: "权限标识",
+      dataIndex: "permission",
+      key: "permission",
+      width: "12%",
+      ellipsis: true,
+    },
+    {
+      title: "排序",
+      dataIndex: "sort",
+      key: "sort",
+      width: "8%",
+    },
+    {
+      title: "状态",
+      dataIndex: "status",
+      key: "status",
+      width: "8%",
+      render: (status: number) => (
+        <Tag color={status === 1 ? "success" : "error"}>
+          {status === 1 ? "启用" : "禁用"}
+        </Tag>
+      ),
+    },
+    {
+      title: "操作",
+      key: "action",
+      width: "15%",
       render: (_, record) => (
         <Space size="middle">
           <Button
@@ -160,82 +358,269 @@ const MenuPage: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: '24px' }}>
-      <div style={{ marginBottom: 16 }}>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={handleAdd}
+    <App>
+      <div style={{ padding: "24px" }}>
+        <div style={{ marginBottom: 16 }}>
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+            添加菜单
+          </Button>
+        </div>
+
+        <Table
+          columns={columns}
+          dataSource={data}
+          rowKey="id"
+          loading={loading}
+          pagination={false}
+          scroll={{ x: "max-content" }}
+        />
+
+        <Modal
+          title={editingId ? "编辑菜单" : "添加菜单"}
+          open={modalVisible}
+          onOk={handleSubmit}
+          onCancel={() => setModalVisible(false)}
+          width={800}
         >
-          添加菜单
-        </Button>
+          <Form
+            form={form}
+            layout="vertical"
+            initialValues={{
+              type: "MENU", // 设置默认值为 MENU
+              status: 1,
+              sort: 0,
+              layout: "DEFAULT",
+              hidden: false,
+              hideTab: false,
+              hideMenu: false,
+              hideBreadcrumb: false,
+              hideChildren: false,
+              isExternal: false,
+              keepAlive: true,
+              constant: false,
+              affix: false,
+            }}
+          >
+            <Collapse
+              defaultActiveKey={["basic", "route"]}
+              style={{ marginBottom: 24 }}
+              items={[
+                {
+                  key: "basic",
+                  label: "基本信息",
+                  children: (
+                    <Space style={{ width: "100%" }} direction="vertical">
+                      <Form.Item
+                        name="name"
+                        label="名称"
+                        rules={[{ required: true, message: "请输入菜单名称" }]}
+                      >
+                        <Input />
+                      </Form.Item>
+
+                      <Form.Item
+                        name="type"
+                        label="菜单类型"
+                        rules={[{ required: true, message: "请选择菜单类型" }]}
+                      >
+                        <Select>
+                          <Select.Option value="DIRECTORY">目录</Select.Option>
+                          <Select.Option value="MENU">菜单</Select.Option>
+                          <Select.Option value="BUTTON">按钮</Select.Option>
+                        </Select>
+                      </Form.Item>
+
+                      <Form.Item name="icon" label="图标">
+                        <IconPicker />
+                      </Form.Item>
+
+                      <Form.Item name="sort" label="排序号" initialValue={0}>
+                        <Input type="number" />
+                      </Form.Item>
+
+                      <Form.Item name="parentId" label="父级菜单">
+                        <Select allowClear>
+                          {data.map((item) => (
+                            <Select.Option key={item.id} value={item.id}>
+                              {item.name}
+                            </Select.Option>
+                          ))}
+                        </Select>
+                      </Form.Item>
+
+                      <Form.Item name="status" label="状态" initialValue={1}>
+                        <Select>
+                          <Select.Option value={1}>启用</Select.Option>
+                          <Select.Option value={0}>禁用</Select.Option>
+                        </Select>
+                      </Form.Item>
+                    </Space>
+                  ),
+                },
+                {
+                  key: "route",
+                  label: "路由配置",
+                  children: (
+                    <Space style={{ width: "100%" }} direction="vertical">
+                      <Form.Item name="routeName" label="路由名称">
+                        <Input />
+                      </Form.Item>
+
+                      <Form.Item name="path" label="路由路径">
+                        <Input />
+                      </Form.Item>
+
+                      <Form.Item name="component" label="组件路径">
+                        <Input />
+                      </Form.Item>
+
+                      <Form.Item
+                        name="layout"
+                        label="布局类型"
+                        initialValue="DEFAULT"
+                      >
+                        <Select>
+                          <Select.Option value="DEFAULT">
+                            默认布局
+                          </Select.Option>
+                          <Select.Option value="BLANK">空白布局</Select.Option>
+                          <Select.Option value="CUSTOM">
+                            自定义布局
+                          </Select.Option>
+                        </Select>
+                      </Form.Item>
+
+                      <Form.Item name="redirect" label="重定向路径">
+                        <Input />
+                      </Form.Item>
+                    </Space>
+                  ),
+                },
+                {
+                  key: "advanced",
+                  label: "高级配置",
+                  children: (
+                    <Space style={{ width: "100%" }} direction="vertical">
+                      <Form.Item name="i18nKey" label="国际化Key">
+                        <Input />
+                      </Form.Item>
+
+                      <Form.Item name="permission" label="权限标识">
+                        <Input />
+                      </Form.Item>
+
+                      <Form.Item name="remark" label="备注">
+                        <Input.TextArea />
+                      </Form.Item>
+
+                      <Form.Item label="显示设置">
+                        <Space wrap>
+                          <Form.Item
+                            name="hidden"
+                            valuePropName="checked"
+                            noStyle
+                          >
+                            <Switch
+                              checkedChildren="隐藏"
+                              unCheckedChildren="显示"
+                            />
+                          </Form.Item>
+                          <Form.Item
+                            name="hideTab"
+                            valuePropName="checked"
+                            noStyle
+                          >
+                            <Switch
+                              checkedChildren="隐藏页签"
+                              unCheckedChildren="显示页签"
+                            />
+                          </Form.Item>
+                          <Form.Item
+                            name="hideMenu"
+                            valuePropName="checked"
+                            noStyle
+                          >
+                            <Switch
+                              checkedChildren="隐藏菜单"
+                              unCheckedChildren="显示菜单"
+                            />
+                          </Form.Item>
+                          <Form.Item
+                            name="hideBreadcrumb"
+                            valuePropName="checked"
+                            noStyle
+                          >
+                            <Switch
+                              checkedChildren="隐藏面包屑"
+                              unCheckedChildren="显示面包屑"
+                            />
+                          </Form.Item>
+                          <Form.Item
+                            name="hideChildren"
+                            valuePropName="checked"
+                            noStyle
+                          >
+                            <Switch
+                              checkedChildren="隐藏子菜单"
+                              unCheckedChildren="显示子菜单"
+                            />
+                          </Form.Item>
+                        </Space>
+                      </Form.Item>
+
+                      <Form.Item label="功能设置">
+                        <Space wrap>
+                          <Form.Item
+                            name="isExternal"
+                            valuePropName="checked"
+                            noStyle
+                          >
+                            <Switch
+                              checkedChildren="外链"
+                              unCheckedChildren="内部"
+                            />
+                          </Form.Item>
+                          <Form.Item
+                            name="keepAlive"
+                            valuePropName="checked"
+                            noStyle
+                          >
+                            <Switch
+                              checkedChildren="缓存"
+                              unCheckedChildren="不缓存"
+                            />
+                          </Form.Item>
+                          <Form.Item
+                            name="constant"
+                            valuePropName="checked"
+                            noStyle
+                          >
+                            <Switch
+                              checkedChildren="常量"
+                              unCheckedChildren="非常量"
+                            />
+                          </Form.Item>
+                          <Form.Item
+                            name="affix"
+                            valuePropName="checked"
+                            noStyle
+                          >
+                            <Switch
+                              checkedChildren="固定"
+                              unCheckedChildren="不固定"
+                            />
+                          </Form.Item>
+                        </Space>
+                      </Form.Item>
+                    </Space>
+                  ),
+                },
+              ]}
+            />
+          </Form>
+        </Modal>
       </div>
-
-      <Table
-        columns={columns}
-        dataSource={data}
-        rowKey="id"
-        loading={loading}
-        pagination={false}
-        scroll={{ x: 'max-content' }}
-      />
-
-      <Modal
-        title={editingId ? '编辑菜单' : '添加菜单'}
-        open={modalVisible}
-        onOk={handleSubmit}
-        onCancel={() => setModalVisible(false)}
-        width={600}
-      >
-        <Form
-          form={form}
-          layout="vertical"
-        >
-          <Form.Item
-            name="name"
-            label="名称"
-            rules={[{ required: true, message: '请输入菜单名称' }]}
-          >
-            <Input />
-          </Form.Item>
-          <Form.Item
-            name="path"
-            label="路径"
-            rules={[{ required: true, message: '请输入菜单路径' }]}
-          >
-            <Input />
-          </Form.Item>
-          <Form.Item
-            name="icon"
-            label="图标"
-          >
-            <Select
-              showSearch
-              placeholder="选择图标"
-              optionFilterProp="label"
-              filterOption={(input, option) =>
-                (option?.label as string).toLowerCase().includes(input.toLowerCase())
-              }
-            >
-              {Object.keys(Icons)
-                .filter(key => key.endsWith('Outlined'))
-                .map(key => (
-                  <Select.Option key={key} value={key} label={key}>
-                    {getIconComponent(key)} {key}
-                  </Select.Option>
-                ))}
-            </Select>
-          </Form.Item>
-          <Form.Item
-            name="sort"
-            label="排序"
-            rules={[{ required: true, message: '请输入排序号' }]}
-          >
-            <Input type="number" />
-          </Form.Item>
-        </Form>
-      </Modal>
-    </div>
+    </App>
   );
 };
 

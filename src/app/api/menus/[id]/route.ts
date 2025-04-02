@@ -98,13 +98,17 @@ export async function PUT(request: NextRequest) {
       data: {
         name: data.name,
         path: data.path,
-        icon: data.icon !== undefined ? data.icon : existingMenu.icon,
-        sort: data.order !== undefined ? data.order : existingMenu.sort,
-        hidden: data.isVisible !== undefined ? !data.isVisible : existingMenu.hidden,
+        icon: data.icon || null,
+        sort: data.order || 0,
+        status: data.status !== undefined ? data.status : 1,
+        hidden: data.status === 0,
         updatedAt: new Date(),
-        parent: data.parentId !== undefined ? {
-          connect: data.parentId ? { id: data.parentId } : undefined
+        parent: data.parentId ? {
+          connect: { id: data.parentId }
         } : undefined,
+        menuPermissions: data.permissionId ? {
+          connect: [{ id: data.permissionId }]
+        } : undefined
       }
     });
 

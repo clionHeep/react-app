@@ -32,7 +32,7 @@ interface MenuItemType {
 interface AntMenuItemType {
   key: string;
   icon?: React.ReactNode;
-  label: string;
+  label: React.ReactNode;
   children?: AntMenuItemType[];
   path?: string;
   hidden?: boolean;
@@ -87,7 +87,7 @@ const MixLayout: React.FC<LayoutProps> = ({
       }
 
       return menuItems
-        .filter((item) => !item.hidden) // 过滤掉隐藏的菜单项
+        .filter((item) => !item.hidden)
         .map((item) => {
           const hasChildren =
             item.children &&
@@ -104,25 +104,36 @@ const MixLayout: React.FC<LayoutProps> = ({
           // 使用 id 和 path 组合作为唯一 key
           const itemKey = `${item.id}-${item.path || ""}`;
 
-          if (hasChildren) {
-            return {
-              key: itemKey,
-              icon: getIconComponent(item.icon || ""),
-              label: item.name,
-              children: generateMenuItems(item.children),
-              path: item.path, // 保存原始路径
-            };
-          }
-
           return {
             key: itemKey,
             icon: getIconComponent(item.icon || ""),
-            label: item.name,
+            label: (
+              <div
+                onClick={(e) => {
+                  // 阻止事件冒泡，防止触发父级菜单的展开/收起
+                  e.stopPropagation();
+                  if (item.path) {
+                    const [, path] = itemKey.split("-");
+                    if (isExternal(path)) {
+                      window.open(path, "_blank");
+                    } else {
+                      router.push(path);
+                    }
+                  }
+                }}
+                style={{ display: "inline-block", width: "100%" }}
+              >
+                {item.name}
+              </div>
+            ),
+            children: hasChildren
+              ? generateMenuItems(item.children)
+              : undefined,
             path: item.path, // 保存原始路径
           };
         });
     },
-    []
+    [router]
   );
 
   // 当后端返回的菜单数据改变或主菜单选择变化时，重新生成菜单项
@@ -188,32 +199,26 @@ const MixLayout: React.FC<LayoutProps> = ({
 
     // 遍历主菜单查找匹配的菜单项
     for (const mainItem of mainMenuItems) {
-      // 检查主菜单是否匹配
-      if (mainItem.path === pathname) {
+      // 从 key 中提取原始路径
+      const [, mainPath] = mainItem.key.split("-");
+
+      // 检查主菜单是否匹配当前路径
+      if (mainPath === pathname) {
         setActiveMainMenu(mainItem.key);
-
-        // 如果主菜单有子菜单，检查是否有子菜单项与当前路径匹配
-        if (mainItem.children && Array.isArray(mainItem.children)) {
-          const matchingSubItem = mainItem.children.find(
-            (item) => item.path === pathname
-          );
-          if (matchingSubItem) {
-            setActiveSubMenu(matchingSubItem.key);
-          }
-        }
-
         setHasSubMenu(false);
         setSubMenuItems([]);
+        setActiveSubMenu(null);
         return;
       }
 
       // 检查子菜单是否匹配
       if (mainItem.children && Array.isArray(mainItem.children)) {
         for (const subItem of mainItem.children) {
-          if (subItem.path === pathname) {
+          const [, subPath] = subItem.key.split("-");
+          if (subPath === pathname) {
             setActiveMainMenu(mainItem.key);
-            setHasSubMenu(false);
-            setSubMenuItems([]);
+            setHasSubMenu(true);
+            setSubMenuItems(mainItem.children);
             setActiveSubMenu(subItem.key);
             return;
           }
@@ -221,7 +226,7 @@ const MixLayout: React.FC<LayoutProps> = ({
       }
     }
 
-    // 如果没有找到匹配的菜单项，清除所有高亮状态
+    // 如果没有找到匹配的菜单项，清除所有状态
     setActiveMainMenu(null);
     setHasSubMenu(false);
     setSubMenuItems([]);
@@ -265,7 +270,7 @@ const MixLayout: React.FC<LayoutProps> = ({
         }
       }
     } else {
-      // 没有子菜单，直接导航
+      // 没有子菜单，清除子菜单状态
       setHasSubMenu(false);
       setSubMenuItems([]);
       setActiveSubMenu(null);

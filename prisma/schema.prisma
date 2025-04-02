@@ -7,30 +7,64 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// 菜单类型枚举
+enum MenuType {
+  DIRECTORY  // 目录
+  MENU       // 菜单
+  BUTTON     // 按钮
+}
+
+// 菜单布局枚举
+enum LayoutType {
+  DEFAULT    // 默认布局
+  BLANK      // 空白布局
+  CUSTOM     // 自定义布局
+}
+
 model menu {
-  id          Int              @id @default(autoincrement())
-  name        String
-  path        String?
-  component   String?
-  redirect    String?
-  icon        String?
-  sort        Int              @default(0)
-  hidden      Boolean          @default(false)
-  status      Int              @default(1)  // 添加状态字段，默认为1（启用）
-  parentId    Int?
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  id            Int              @id @default(autoincrement())
+  name          String          // 菜单名称
+  routeName     String?         // 路由名称，用于前端路由配置
+  path          String?         // 路由路径
+  component     String?         // 组件路径
+  layout        LayoutType      @default(DEFAULT)  // 布局类型
+  redirect      String?         // 重定向路径
+  icon          String?         // 图标名称
+  i18nKey       String?         // 国际化key
+  type          MenuType        @default(MENU)    // 菜单类型：目录/菜单/按钮
+  permission    String?         // 权限标识符，用于权限控制
+  params        Json?           // 路由参数，使用JSON存储
+  query         Json?           // 路由查询参数，使用JSON存储
+  sort          Int            @default(0)    // 排序号
+  hidden        Boolean        @default(false) // 是否隐藏菜单
+  hideTab       Boolean        @default(false) // 是否隐藏页签
+  hideMenu      Boolean        @default(false) // 是否隐藏左侧菜单
+  hideBreadcrumb Boolean       @default(false) // 是否隐藏面包屑
+  hideChildren  Boolean        @default(false) // 是否隐藏子菜单
+  status        Int            @default(1)     // 菜单状态：1启用，0禁用
+  isExternal    Boolean        @default(false) // 是否外链
+  keepAlive     Boolean        @default(false) // 是否缓存路由
+  constant      Boolean        @default(false) // 是否为常量路由
+  affix         Boolean        @default(false) // 是否固定标签
+  parentId      Int?                          // 父菜单ID
+  createdBy     Int?                          // 创建人ID
+  updatedBy     Int?                          // 更新人ID
+  createdAt     DateTime       @default(now()) // 创建时间
+  updatedAt     DateTime       @updatedAt      // 更新时间
+  remark        String?                        // 备注说明
   
   // 关系
-  parent      menu?            @relation("menuTomenu", fields: [parentId], references: [id], map: "Menu_parentId_fkey")
-  children    menu[]           @relation("menuTomenu")
-  rolemenu    rolemenu[]       // 通过中间表与角色关联
-  roles       role[]           @relation("RoleToMenu") // 多对多关系：菜单-角色
-  
-  // 修改：统一使用menuPermission作为菜单-权限关联表
-  menuPermissions menuPermission[] // 菜单-权限详细关联，包含actionType
+  parent        menu?          @relation("menuTomenu", fields: [parentId], references: [id], map: "Menu_parentId_fkey")
+  children      menu[]         @relation("menuTomenu")
+  rolemenu     rolemenu[]     // 通过中间表与角色关联
+  roles        role[]         @relation("RoleToMenu") // 多对多关系：菜单-角色
+  menuPermissions menuPermission[] // 菜单-权限关联
+  creator      user?          @relation("MenuCreator", fields: [createdBy], references: [id])
+  updater      user?          @relation("MenuUpdater", fields: [updatedBy], references: [id])
 
   @@index([parentId], map: "Menu_parentId_fkey")
+  @@index([createdBy])
+  @@index([updatedBy])
 }
 
 model permission {
@@ -147,6 +181,10 @@ model user {
   refreshtoken refreshtoken?
   userrole     userrole[]    // 通过中间表与角色关联
   rolesDirect  role[]        @relation("UserToRole") // 多对多关系：用户-角色
+  
+  // 添加与 menu 的关系
+  createdMenus  menu[]  @relation("MenuCreator")
+  updatedMenus  menu[]  @relation("MenuUpdater")
 }
 
 model userrole {

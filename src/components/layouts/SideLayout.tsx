@@ -34,7 +34,7 @@ interface MenuItemType {
 interface AntMenuItemType {
   key: string;
   icon?: React.ReactNode;
-  label: string;
+  label: React.ReactNode;
   children?: AntMenuItemType[];
 }
 
@@ -98,22 +98,31 @@ const SideLayout: React.FC<LayoutProps> = ({
         
         console.log(`[SideLayout] 处理菜单项: ${item.name}, 路径: ${item.path || '未指定'}`);
         
-        if (hasChildren) {
-          return {
-            key: item.path ,
-            icon: getIconComponent(item.icon || ""),
-            label: item.name,
-            children: generateMenuItems(item.children),
-          };
-        }
-        
         return {
-          key: item.path,
+          key: item.path || '',
           icon: getIconComponent(item.icon || ""),
-          label: item.name,
+          label: (
+            <div
+              onClick={(e) => {
+                // 阻止事件冒泡，防止触发父级菜单的展开/收起
+                e.stopPropagation();
+                if (item.path) {
+                  if (isExternal(item.path)) {
+                    window.open(item.path, "_blank");
+                  } else {
+                    router.push(item.path);
+                  }
+                }
+              }}
+              style={{ display: 'inline-block', width: '100%' }}
+            >
+              {item.name}
+            </div>
+          ),
+          children: hasChildren ? generateMenuItems(item.children) : undefined
         };
       });
-  }, []);
+  }, [router]);
 
   // 当后端返回的菜单数据改变时，重新生成菜单项
   useEffect(() => {
