@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
 import { verifyAdmin } from '@/utils/auth-utils';
 import type { Menu } from '@/types/api';
+import { getErrorResponse } from "@/utils/utils";
+import { MenuType as PrismaMenuType } from '@prisma/client';
+
+// 类型转换函数
+const convertPrismaMenuType = (type: PrismaMenuType): Menu['type'] => {
+  return type as Menu['type'];
+};
 
 /**
  * 获取菜单列表
@@ -39,30 +46,13 @@ export async function GET(request: Request) {
       name: menu.name,
       path: menu.path || '',
       icon: menu.icon || '',
-      order: menu.sort,
-      status: menu.status,
-      parentId: menu.parentId,
-      createTime: menu.createdAt.toISOString(),
-      updateTime: menu.updatedAt.toISOString(),
-      type: menu.type,
-      component: menu.component || '',
+      type: convertPrismaMenuType(menu.type),
       permission: menu.permission || '',
-      routeName: menu.routeName || '',
-      layout: menu.layout || 'DEFAULT',
-      redirect: menu.redirect || '',
-      i18nKey: menu.i18nKey || '',
-      params: menu.params || {},
-      query: menu.query || {},
-      hidden: menu.hidden,
-      hideTab: menu.hideTab,
-      hideMenu: menu.hideMenu,
-      hideBreadcrumb: menu.hideBreadcrumb,
-      hideChildren: menu.hideChildren,
-      isExternal: menu.isExternal,
-      keepAlive: menu.keepAlive,
-      constant: menu.constant,
-      affix: menu.affix,
-      remark: menu.remark || ''
+      parentId: menu.parentId,
+      sort: menu.sort,
+      status: menu.status,
+      component: menu.component || '',
+      children: []
     }));
 
     return NextResponse.json({
@@ -118,86 +108,34 @@ export async function GET_TREE() {
       }
 
       // 处理子菜单
-      const children = menu.children?.map(child => {
-        let childPath = child.path || '';
-        let childComponent = child.component || '';
-        
-        if (!childPath.startsWith('/')) {
-          childPath = '/' + childPath;
-        }
-
-        // 如果没有设置 component，则使用 path
-        if (!childComponent) {
-          childComponent = childPath;
-        }
-        
-        return {
-          id: child.id,
-          name: child.name,
-          path: childPath,
-          icon: child.icon || '',
-          order: child.sort,
-          status: child.status,
-          parentId: child.parentId,
-          createTime: child.createdAt.toISOString(),
-          updateTime: child.updatedAt.toISOString(),
-          type: child.type,
-          component: childComponent,
-          permission: child.permission || '',
-          routeName: child.routeName || '',
-          layout: child.layout || 'DEFAULT',
-          redirect: child.redirect || '',
-          i18nKey: child.i18nKey || '',
-          params: child.params || {},
-          query: child.query || {},
-          hidden: child.hidden,
-          hideTab: child.hideTab,
-          hideMenu: child.hideMenu,
-          hideBreadcrumb: child.hideBreadcrumb,
-          hideChildren: child.hideChildren,
-          isExternal: child.isExternal,
-          keepAlive: child.keepAlive,
-          constant: child.constant,
-          affix: child.affix,
-          remark: child.remark || '',
-          children: []
-        };
-      }) || [];
+      const children = menu.children?.map(child => ({
+        id: child.id,
+        name: child.name,
+        path: child.path || '',
+        icon: child.icon || '',
+        type: convertPrismaMenuType(child.type),
+        permission: child.permission || '',
+        parentId: child.parentId,
+        sort: child.sort,
+        status: child.status,
+        component: child.component || '',
+        children: []
+      })) || [];
 
       // 创建父级菜单项
-      const parentMenuItem = {
+      return {
         id: menu.id,
         name: menu.name,
         path: path,
         icon: menu.icon || '',
-        order: menu.sort,
-        status: menu.status,
-        parentId: menu.parentId,
-        createTime: menu.createdAt.toISOString(),
-        updateTime: menu.updatedAt.toISOString(),
-        type: menu.type,
-        component: component,
+        type: convertPrismaMenuType(menu.type),
         permission: menu.permission || '',
-        routeName: menu.routeName || '',
-        layout: menu.layout || 'DEFAULT',
-        redirect: menu.redirect || '',
-        i18nKey: menu.i18nKey || '',
-        params: menu.params || {},
-        query: menu.query || {},
-        hidden: menu.hidden,
-        hideTab: menu.hideTab,
-        hideMenu: menu.hideMenu,
-        hideBreadcrumb: menu.hideBreadcrumb,
-        hideChildren: menu.hideChildren,
-        isExternal: menu.isExternal,
-        keepAlive: menu.keepAlive,
-        constant: menu.constant,
-        affix: menu.affix,
-        remark: menu.remark || '',
+        parentId: menu.parentId,
+        sort: menu.sort,
+        status: menu.status,
+        component: component,
         children: children
       };
-
-      return parentMenuItem;
     });
 
     // 构建树形结构
@@ -234,69 +172,44 @@ export async function GET_TREE() {
  */
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    console.log('创建菜单请求数据:', body);
-    
-    // 验证必填字段
-    if (!body.name || !body.type) {
-      return NextResponse.json(
-        {
-          code: 400,
-          message: '菜单名称和类型为必填项',
-        },
-        { status: 400 }
-      );
+    const data = await request.json();
+    const { type, parentId, permission } = data;
+
+    // 验证按钮类型必须有父级菜单
+    if (type === PrismaMenuType.BUTTON && !parentId) {
+      return getErrorResponse(400, '按钮必须指定父级菜单');
+    }
+
+    // 验证按钮类型必须有权限标识
+    if (type === PrismaMenuType.BUTTON && !permission) {
+      return getErrorResponse(400, '按钮必须指定权限标识');
+    }
+
+    // 验证父级菜单存在且类型正确
+    if (parentId) {
+      const parent = await db.menu.findUnique({
+        where: { id: parentId }
+      });
+      if (!parent) {
+        return getErrorResponse(400, '父级菜单不存在');
+      }
+      if (type === PrismaMenuType.BUTTON && parent.type !== PrismaMenuType.MENU) {
+        return getErrorResponse(400, '按钮只能添加在菜单下');
+      }
     }
 
     const menu = await db.menu.create({
-      data: {
-        name: body.name,
-        routeName: body.routeName,
-        path: body.path,
-        component: body.component,
-        layout: body.layout,
-        redirect: body.redirect,
-        icon: body.icon,
-        i18nKey: body.i18nKey,
-        type: body.type,
-        permission: body.permission,
-        params: body.params,
-        query: body.query,
-        sort: body.sort || 0,
-        hidden: body.hidden || false,
-        hideTab: body.hideTab || false,
-        hideMenu: body.hideMenu || false,
-        hideBreadcrumb: body.hideBreadcrumb || false,
-        hideChildren: body.hideChildren || false,
-        status: body.status || 1,
-        isExternal: body.isExternal || false,
-        keepAlive: body.keepAlive || true,
-        constant: body.constant || false,
-        affix: body.affix || false,
-        parentId: body.parentId,
-        remark: body.remark,
-      },
+      data
     });
-
-    console.log('菜单创建成功:', menu);
 
     return NextResponse.json({
       code: 0,
-      message: 'success',
-      data: menu,
+      message: '创建成功',
+      data: menu
     });
-  } catch (error) {
-    console.error('创建菜单失败，详细错误:', error);
-    if (error instanceof Error) {
-      console.error('错误堆栈:', error.stack);
-    }
-    return NextResponse.json(
-      {
-        code: 500,
-        message: error instanceof Error ? error.message : 'Internal Server Error',
-      },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    console.error('创建菜单失败:', error);
+    return getErrorResponse(500, '创建菜单失败');
   }
 }
 
@@ -305,83 +218,57 @@ export async function POST(request: Request) {
  */
 export async function PUT(request: Request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
-    
+    const data = await request.json();
+    const { id, type, parentId, permission } = data;
+
     if (!id) {
-      return NextResponse.json(
-        {
-          code: 400,
-          message: 'Missing menu ID',
-        },
-        { status: 400 }
-      );
+      return getErrorResponse(400, '缺少菜单ID');
     }
 
-    const body = await request.json();
-    console.log('更新菜单请求数据:', { id, body });
-    
-    // 验证必填字段
-    if (!body.name || !body.type) {
-      return NextResponse.json(
-        {
-          code: 400,
-          message: '菜单名称和类型为必填项',
-        },
-        { status: 400 }
-      );
-    }
-    
-    const menu = await db.menu.update({
-      where: { id: parseInt(id) },
-      data: {
-        name: body.name,
-        routeName: body.routeName,
-        path: body.path,
-        component: body.component,
-        layout: body.layout,
-        redirect: body.redirect,
-        icon: body.icon,
-        i18nKey: body.i18nKey,
-        type: body.type,
-        permission: body.permission,
-        params: body.params,
-        query: body.query,
-        sort: body.sort,
-        hidden: body.hidden,
-        hideTab: body.hideTab,
-        hideMenu: body.hideMenu,
-        hideBreadcrumb: body.hideBreadcrumb,
-        hideChildren: body.hideChildren,
-        status: body.status,
-        isExternal: body.isExternal,
-        keepAlive: body.keepAlive,
-        constant: body.constant,
-        affix: body.affix,
-        parentId: body.parentId,
-        remark: body.remark,
-      },
+    // 验证菜单是否存在
+    const existingMenu = await db.menu.findUnique({
+      where: { id }
     });
+    if (!existingMenu) {
+      return getErrorResponse(404, '菜单不存在');
+    }
 
-    console.log('菜单更新成功:', menu);
+    // 验证按钮类型必须有父级菜单
+    if (type === PrismaMenuType.BUTTON && !parentId) {
+      return getErrorResponse(400, '按钮必须指定父级菜单');
+    }
+
+    // 验证按钮类型必须有权限标识
+    if (type === PrismaMenuType.BUTTON && !permission) {
+      return getErrorResponse(400, '按钮必须指定权限标识');
+    }
+
+    // 验证父级菜单存在且类型正确
+    if (parentId) {
+      const parent = await db.menu.findUnique({
+        where: { id: parentId }
+      });
+      if (!parent) {
+        return getErrorResponse(400, '父级菜单不存在');
+      }
+      if (type === PrismaMenuType.BUTTON && parent.type !== PrismaMenuType.MENU) {
+        return getErrorResponse(400, '按钮只能添加在菜单下');
+      }
+    }
+
+    const menu = await db.menu.update({
+      where: { id },
+      data
+    });
 
     return NextResponse.json({
       code: 0,
-      message: 'success',
-      data: menu,
+      message: '更新成功',
+      data: menu
     });
-  } catch (error) {
-    console.error('更新菜单失败，详细错误:', error);
-    if (error instanceof Error) {
-      console.error('错误堆栈:', error.stack);
-    }
-    return NextResponse.json(
-      {
-        code: 500,
-        message: error instanceof Error ? error.message : 'Internal Server Error',
-      },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    console.error('更新菜单失败:', error);
+    return getErrorResponse(500, '更新菜单失败');
   }
 }
 
@@ -391,36 +278,31 @@ export async function PUT(request: Request) {
 export async function DELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
-    
+    const id = Number(searchParams.get('id'));
+
     if (!id) {
-      return NextResponse.json(
-        {
-          code: 400,
-          message: 'Missing menu ID',
-        },
-        { status: 400 }
-      );
+      return getErrorResponse(400, '缺少菜单ID');
+    }
+
+    // 检查是否有子菜单或按钮
+    const children = await db.menu.findMany({
+      where: { parentId: id }
+    });
+    if (children.length > 0) {
+      return getErrorResponse(400, '请先删除子菜单或按钮');
     }
 
     await db.menu.delete({
-      where: { id: parseInt(id) },
+      where: { id }
     });
 
     return NextResponse.json({
       code: 0,
-      message: 'success',
-      data: null,
+      message: '删除成功'
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('删除菜单失败:', error);
-    return NextResponse.json(
-      {
-        code: 500,
-        message: 'Internal Server Error',
-      },
-      { status: 500 }
-    );
+    return getErrorResponse(500, '删除菜单失败');
   }
 }
 

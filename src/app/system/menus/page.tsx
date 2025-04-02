@@ -126,6 +126,20 @@ const IconPicker: React.FC<{
   );
 };
 
+// 构建树形结构的辅助函数
+const buildTree = (
+  items: MenuItem[],
+  parentId: number | null = null
+): MenuItem[] => {
+  return items
+    .filter((item) => item.parentId === parentId)
+    .map((item) => ({
+      ...item,
+      children: buildTree(items, item.id),
+    }))
+    .sort((a, b) => (a.sort || 0) - (b.sort || 0));
+};
+
 const MenuPage: React.FC = () => {
   const [data, setData] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -152,7 +166,7 @@ const MenuPage: React.FC = () => {
       if (response.data?.data) {
         const data = response.data.data;
         if (data.list && Array.isArray(data.list)) {
-          menuData = data.list.map((item: MenuItem) => ({
+          const flatMenus = data.list.map((item: MenuItem) => ({
             ...item,
             sort: item.order || 0,
             status: item.status || 1,
@@ -165,18 +179,19 @@ const MenuPage: React.FC = () => {
             keepAlive: item.keepAlive || true,
             constant: item.constant || false,
             affix: item.affix || false,
-            component: item.component || '',
-            permission: item.permission || '',
-            routeName: item.routeName || '',
-            layout: item.layout || 'DEFAULT',
-            redirect: item.redirect || '',
-            i18nKey: item.i18nKey || '',
+            component: item.component || "",
+            permission: item.permission || "",
+            routeName: item.routeName || "",
+            layout: item.layout || "DEFAULT",
+            redirect: item.redirect || "",
+            i18nKey: item.i18nKey || "",
             params: item.params || {},
             query: item.query || {},
-            remark: item.remark || ''
+            remark: item.remark || "",
           }));
+          menuData = buildTree(flatMenus);
         } else if (Array.isArray(data)) {
-          menuData = data;
+          menuData = buildTree(data);
         }
       }
 
@@ -270,16 +285,33 @@ const MenuPage: React.FC = () => {
 
   const columns: ColumnsType<MenuItem> = [
     {
+      title: "",
+      key: "expand",
+      width: 48,
+      render: (_, record) => {
+        if (record.children && record.children.length > 0) {
+          return <div style={{ width: "24px" }} />;
+        }
+        return null;
+      },
+    },
+    {
       title: "名称",
       dataIndex: "name",
       key: "name",
-      width: "15%",
+      width: "220px",
+      render: (text, record) => (
+        <Space>
+          {record.icon && getIconComponent(record.icon)}
+          <span>{text}</span>
+        </Space>
+      ),
     },
     {
       title: "类型",
       dataIndex: "type",
       key: "type",
-      width: "10%",
+      width: "120px",
       render: (type: string) =>
         ({
           DIRECTORY: "目录",
@@ -288,45 +320,50 @@ const MenuPage: React.FC = () => {
         }[type] || type),
     },
     {
-      title: "图标",
-      dataIndex: "icon",
-      key: "icon",
-      width: "8%",
-      render: (icon: string) => getIconComponent(icon),
-    },
-    {
       title: "路由路径",
       dataIndex: "path",
       key: "path",
-      width: "15%",
+      width: "180px",
+      render: (path: string) => <span style={{ color: "#666" }}>{path}</span>,
     },
     {
       title: "组件",
       dataIndex: "component",
       key: "component",
-      width: "15%",
-      ellipsis: true,
+      width: "180px",
+      render: (component: string) => (
+        <span style={{ color: "#666", fontFamily: "monospace" }}>
+          {component}
+        </span>
+      ),
     },
     {
       title: "权限标识",
       dataIndex: "permission",
       key: "permission",
-      width: "12%",
-      ellipsis: true,
+      width: "180px",
+      render: (permission: string) => (
+        <span style={{ color: "#666" }}>{permission}</span>
+      ),
     },
     {
       title: "排序",
       dataIndex: "sort",
       key: "sort",
-      width: "8%",
+      width: "80px",
+      align: "center",
     },
     {
       title: "状态",
       dataIndex: "status",
       key: "status",
-      width: "8%",
+      width: "100px",
+      align: "center",
       render: (status: number) => (
-        <Tag color={status === 1 ? "success" : "error"}>
+        <Tag
+          color={status === 1 ? "success" : "error"}
+          style={{ minWidth: "48px", textAlign: "center" }}
+        >
           {status === 1 ? "启用" : "禁用"}
         </Tag>
       ),
@@ -334,11 +371,12 @@ const MenuPage: React.FC = () => {
     {
       title: "操作",
       key: "action",
-      width: "15%",
+      width: "150px",
       render: (_, record) => (
-        <Space size="middle">
+        <Space size={4}>
           <Button
             type="link"
+            size="small"
             icon={<EditOutlined />}
             onClick={() => handleEdit(record)}
           >
@@ -346,6 +384,7 @@ const MenuPage: React.FC = () => {
           </Button>
           <Button
             type="link"
+            size="small"
             danger
             icon={<DeleteOutlined />}
             onClick={() => handleDelete(record.id)}
@@ -373,7 +412,85 @@ const MenuPage: React.FC = () => {
           loading={loading}
           pagination={false}
           scroll={{ x: "max-content" }}
+          expandable={{
+            defaultExpandAllRows: true,
+            expandRowByClick: true,
+            indentSize: 0,
+            expandIcon: ({ expanded, onExpand, record }) => {
+              if (record.children && record.children.length > 0) {
+                return (
+                  <div
+                    className="expand-icon"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onExpand(record, e);
+                    }}
+                    style={{
+                      transition: "all 0.3s ease",
+                      transform: expanded ? "rotate(90deg)" : "rotate(0deg)",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: "24px",
+                      height: "24px",
+                      cursor: "pointer",
+                      color: "#1677ff",
+                    }}
+                  >
+                    <PlusOutlined style={{ fontSize: "12px" }} />
+                  </div>
+                );
+              }
+              return null;
+            },
+          }}
+          rowClassName={(record) => {
+            return record.parentId ? "child-menu-row" : "";
+          }}
+          className="menu-table"
         />
+
+        <style jsx global>{`
+          .menu-table .ant-table-row {
+            transition: all 0.3s ease;
+          }
+
+          .menu-table .child-menu-row td {
+            padding-left: 40px !important;
+            background-color: #fafafa;
+          }
+
+          .menu-table .ant-table-cell {
+            padding: 12px 16px !important;
+          }
+
+          .menu-table .expand-icon:hover {
+            color: #1677ff;
+          }
+
+          .menu-table .ant-table-row-expand-icon-cell {
+            padding-right: 0 !important;
+          }
+
+          .menu-table .ant-table-tbody > tr.ant-table-row:hover > td {
+            background-color: #f5f5f5;
+          }
+
+          .menu-table .ant-table-tbody > tr > td {
+            border-bottom: 1px solid #f0f0f0;
+          }
+
+          .menu-table .ant-table-thead > tr > th {
+            background-color: #fafafa;
+            font-weight: 500;
+            color: #333;
+          }
+
+          .menu-table .ant-btn-link {
+            padding: 4px 8px;
+            height: auto;
+          }
+        `}</style>
 
         <Modal
           title={editingId ? "编辑菜单" : "添加菜单"}

@@ -21,18 +21,28 @@ enum LayoutType {
   CUSTOM     // 自定义布局
 }
 
+// 操作类型枚举
+enum ActionType {
+  VIEW   // 查看
+  ADD    // 添加
+  EDIT   // 编辑
+  DELETE // 删除
+  EXPORT // 导出
+  IMPORT // 导入
+}
+
 model menu {
   id            Int              @id @default(autoincrement())
   name          String          // 菜单名称
   routeName     String?         // 路由名称，用于前端路由配置
-  path          String?         // 路由路径
-  component     String?         // 组件路径
+  path          String?         // 路由路径，按钮类型为空
+  component     String?         // 组件路径，按钮类型为空
   layout        LayoutType      @default(DEFAULT)  // 布局类型
   redirect      String?         // 重定向路径
-  icon          String?         // 图标名称
+  icon          String?         // 图标，按钮类型为空
   i18nKey       String?         // 国际化key
   type          MenuType        @default(MENU)    // 菜单类型：目录/菜单/按钮
-  permission    String?         // 权限标识符，用于权限控制
+  permission    String?         // 权限标识，按钮类型必填
   params        Json?           // 路由参数，使用JSON存储
   query         Json?           // 路由查询参数，使用JSON存储
   sort          Int            @default(0)    // 排序号
@@ -54,15 +64,15 @@ model menu {
   remark        String?                        // 备注说明
   
   // 关系
-  parent        menu?          @relation("menuTomenu", fields: [parentId], references: [id], map: "Menu_parentId_fkey")
+  parent        menu?          @relation("menuTomenu", fields: [parentId], references: [id])
   children      menu[]         @relation("menuTomenu")
-  rolemenu     rolemenu[]     // 通过中间表与角色关联
-  roles        role[]         @relation("RoleToMenu") // 多对多关系：菜单-角色
+  rolemenu      rolemenu[]     // 通过中间表与角色关联
+  roles         role[]         @relation("RoleToMenu") // 多对多关系：菜单-角色
   menuPermissions menuPermission[] // 菜单-权限关联
-  creator      user?          @relation("MenuCreator", fields: [createdBy], references: [id])
-  updater      user?          @relation("MenuUpdater", fields: [updatedBy], references: [id])
+  creator       user?          @relation("MenuCreator", fields: [createdBy], references: [id])
+  updater       user?          @relation("MenuUpdater", fields: [updatedBy], references: [id])
 
-  @@index([parentId], map: "Menu_parentId_fkey")
+  @@index([parentId])
   @@index([createdBy])
   @@index([updatedBy])
 }
@@ -223,12 +233,11 @@ model menuPermission {
   id           Int        @id @default(autoincrement())
   menuId       Int
   permissionId Int
-  // 操作类型：view(查看), add(添加), edit(编辑), delete(删除)等
-  actionType   String     @default("view")
+  actionType   ActionType @default(VIEW) // 操作类型
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
   
-  // 修改关系名称使其与model一致
+  // 关系
   menu         menu       @relation(fields: [menuId], references: [id], onDelete: Cascade)
   permission   permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 

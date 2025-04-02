@@ -249,7 +249,8 @@ const MixLayout: React.FC<LayoutProps> = ({
     const hasChildren =
       selectedMainItem?.children &&
       Array.isArray(selectedMainItem.children) &&
-      selectedMainItem.children.length > 0;
+      selectedMainItem.children.length > 0 &&
+      selectedMainItem.children.some((child) => !child.hidden);
 
     if (hasChildren && selectedMainItem.children) {
       // 有子菜单，显示子菜单
@@ -293,16 +294,34 @@ const MixLayout: React.FC<LayoutProps> = ({
     // 从 key 中提取原始路径
     const [, path] = key.split("-");
 
-    // 设置子菜单高亮，但不显示子菜单区域
-    setActiveSubMenu(key);
-    setHasSubMenu(false);
-    setSubMenuItems([]);
+    // 查找当前点击的子菜单项
+    const selectedSubItem = subMenuItems.find((item) => item.key === key);
 
-    if (path) {
-      if (isExternal(path)) {
-        window.open(path, "_blank");
-      } else {
-        router.push(path);
+    // 检查是否有子菜单
+    const hasChildren =
+      selectedSubItem?.children &&
+      Array.isArray(selectedSubItem.children) &&
+      selectedSubItem.children.length > 0 &&
+      selectedSubItem.children.some((child) => !child.hidden);
+
+    if (hasChildren && selectedSubItem.children) {
+      // 有子菜单，显示子菜单
+      setHasSubMenu(true);
+      setSubMenuItems(selectedSubItem.children);
+      setActiveSubMenu(key);
+    } else {
+      // 没有子菜单，清除子菜单状态
+      setHasSubMenu(false);
+      setSubMenuItems([]);
+      setActiveSubMenu(key);
+
+      // 如果路径存在，进行导航
+      if (path) {
+        if (isExternal(path)) {
+          window.open(path, "_blank");
+        } else {
+          router.push(path);
+        }
       }
     }
   };
@@ -442,8 +461,8 @@ const MixLayout: React.FC<LayoutProps> = ({
             background: token.colorBgLayout,
           }}
         >
-          {/* 子菜单 */}
-          {hasSubMenu && (
+          {/* 子菜单 - 只在主菜单被选中且有子菜单时显示 */}
+          {hasSubMenu && activeMainMenu && !activeSubMenu && (
             <Sider
               width={200}
               style={{

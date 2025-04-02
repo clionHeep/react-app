@@ -1,39 +1,41 @@
 import { InternalAxiosRequestConfig } from 'axios';
-import { Prisma } from '@prisma/client';
 
 /**
  * 菜单类型定义
  */
+export enum MenuType {
+  DIRECTORY = 'DIRECTORY',  // 目录
+  MENU = 'MENU',       // 菜单
+  BUTTON = 'BUTTON'    // 按钮
+}
+
+/**
+ * 操作类型定义
+ */
+export enum ActionType {
+  VIEW = 'VIEW',     // 查看
+  ADD = 'ADD',      // 添加
+  EDIT = 'EDIT',    // 编辑
+  DELETE = 'DELETE', // 删除
+  EXPORT = 'EXPORT', // 导出
+  IMPORT = 'IMPORT'  // 导入
+}
+
 export interface Menu {
   id: number;
   name: string;
-  path: string;
-  icon: string;
-  parentId: number | null;
-  order: number;
-  status: number;
-  createTime: string;
-  updateTime: string;
-  type: "DIRECTORY" | "MENU" | "BUTTON";
+  path?: string;
   component?: string;
+  icon?: string;
+  type: MenuType;
   permission?: string;
-  routeName?: string;
-  layout?: "DEFAULT" | "BLANK" | "CUSTOM";
-  redirect?: string;
-  i18nKey?: string;
-  params?: Record<string, string | number | boolean> | Prisma.JsonValue;
-  query?: Record<string, string | number | boolean> | Prisma.JsonValue;
-  hidden?: boolean;
-  hideTab?: boolean;
-  hideMenu?: boolean;
-  hideBreadcrumb?: boolean;
-  hideChildren?: boolean;
-  isExternal?: boolean;
-  keepAlive?: boolean;
-  constant?: boolean;
-  affix?: boolean;
-  remark?: string;
+  parentId?: number | null;
+  sort: number;
+  status: number;
   children?: Menu[];
+  createTime?: string;
+  updateTime?: string;
+  remark?: string;
 }
 
 /**
@@ -147,27 +149,37 @@ export interface MenuQuery {
 }
 
 /**
- * 菜单创建参数
+ * 创建菜单请求参数
  */
 export interface MenuCreate {
   name: string;
-  path: string;
-  icon: string;
+  type: MenuType;
+  path?: string;
+  component?: string;
+  icon?: string;
+  permission?: string;
   parentId?: number;
-  order: number;
-  status: number;
+  sort?: number;
+  status?: number;
 }
 
 /**
- * 菜单更新参数
+ * 更新菜单请求参数
  */
-export interface MenuUpdate {
-  name?: string;
-  path?: string;
-  icon?: string;
-  parentId?: number;
-  order?: number;
-  status?: number;
+export interface MenuUpdate extends Partial<MenuCreate> {
+  id: number;
+}
+
+/**
+ * 菜单权限接口
+ */
+export interface MenuPermission {
+  id: number;
+  menuId: number;
+  permissionId: number;
+  actionType: ActionType;
+  createdAt: string;
+  updatedAt: string;
 }
 
 /**
@@ -208,12 +220,10 @@ export interface RequestWithRetry extends InternalAxiosRequestConfig {
 /**
  * 统一API响应格式
  */
-export interface ApiResponse<T = unknown> {
-  success: boolean;
+export interface ApiResponse<T> {
   code: number;
   message: string;
-  data?: T;
-  error?: string;
+  data: T;
 }
 
 /**
@@ -248,3 +258,15 @@ export interface UserInfoResponse {
   permissions: Permission[];
   roles: Role[];
 }
+
+// 菜单列表响应
+export type MenuListResponse = ApiResponse<{
+  total: number;
+  list: Menu[];
+}>;
+
+// 菜单详情响应
+export type MenuDetailResponse = ApiResponse<Menu>;
+
+// 菜单权限响应
+export type MenuPermissionResponse = ApiResponse<MenuPermission[]>;

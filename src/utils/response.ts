@@ -11,14 +11,13 @@ export function handleSuccess<T>(response: AxiosResponse): ApiResponse<T> {
   const { data } = response;
   
   // 如果返回数据已经是ApiResponse格式
-  if (data && typeof data === 'object' && 'success' in data) {
+  if (data && typeof data === 'object' && 'code' in data) {
     return data as ApiResponse<T>;
   }
   
   // 处理嵌套的响应结构
   if (data && typeof data === 'object' && 'data' in data) {
     return {
-      success: true,
       code: response.status,
       message: data.message || '操作成功',
       data: data.data as T
@@ -27,7 +26,6 @@ export function handleSuccess<T>(response: AxiosResponse): ApiResponse<T> {
   
   // 转换为统一格式
   return {
-    success: true,
     code: response.status,
     message: '操作成功',
     data: data as T
@@ -42,9 +40,9 @@ export function handleSuccess<T>(response: AxiosResponse): ApiResponse<T> {
 export function handleError(error: unknown): ApiResponse<null> {
   // 默认错误响应
   const response: ApiResponse<null> = {
-    success: false,
     code: 500,
-    message: '服务器错误，请稍后再试'
+    message: '服务器错误，请稍后再试',
+    data: null
   };
   
   if (error instanceof AxiosError) {
@@ -61,15 +59,11 @@ export function handleError(error: unknown): ApiResponse<null> {
       if (apiError.message) {
         response.message = apiError.message;
       }
-      if (apiError.error) {
-        response.error = apiError.error;
-      }
     } else if (errorMessage) {
       response.message = errorMessage;
     }
   } else if (error instanceof Error) {
     response.message = error.message;
-    response.error = error.name;
   }
   
   return response;
@@ -80,7 +74,7 @@ export function handleError(error: unknown): ApiResponse<null> {
  * @param response API响应
  */
 export function showResponseMessage<T>(response: ApiResponse<T>): void {
-  if (response.success) {
+  if (response.code === 0) {
     if (response.message && response.message !== '操作成功') {
       message.success(response.message);
     }
